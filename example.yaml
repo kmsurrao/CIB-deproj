@@ -1,0 +1,45 @@
+# nside resolution parameter of maps
+nside: 1024
+
+# maximum ell for which to compute chi^2
+ellmax: 3000
+
+# number of multipoles per bin to use in harmonic ILC calculation
+ells_per_bin: 20
+
+# list of frequencies (GHz) to use in harmonic ILC calculation
+frequencies: [100, 143, 217, 353, 545]
+
+# range of values (inclusive) to test for beta
+beta_range: [1.1, 1.7]
+
+# number of beta values to test
+num_beta_vals: 3
+
+# number of beta values to test in parallel
+# if this input is not provided, no parallelization is assumed (num_parallel=1)
+num_parallel: 3
+
+# factor by which to inflate CIB and deproject for comparison to uninflated 
+# CIB that's deprojected
+cib_inflation: 2
+
+# directory containing agora CIB maps at each frequency in frequencies
+# on NERSC: /global/cfs/cdirs/act/data/agora_sims/cib/planck/len/uk
+# CIB maps are assumed to be in units of uK
+# filenames within directory are assumed to be of form mdpl2_len_mag_cibmap_planck_{freq}_uk.fits
+cib_map_dir: '/scratch/09334/ksurrao/agora_planck/cib'
+
+# file for agora tSZ map, assumed to be in units of uK
+# on NERSC: /global/cfs/cdirs/act/data/agora_sims/tsz/len/mdpl2_ltszNG_bahamas80_rot_sum_4_176_bnd_unb_1.0e+12_1.0e+18_v103021_lmax24000_nside8192_interp1.0_method1_1_lensed_map.fits
+tsz_map_file: '/scratch/09334/ksurrao/agora_planck/tsz.fits'
+
+# directory containing halo files from rot 1 to 30
+# can be downloaded from https://yomori.github.io/agora/index.html
+halo_files_dir: '/scratch/09334/ksurrao/halo_files'
+
+# path to pyilc repository
+pyilc_path: '/work2/09334/ksurrao/stampede2/GitHub/pyilc'
+
+# directory in which to save outputs
+output_dir: '/scratch/09334/ksurrao/cib_beta'
