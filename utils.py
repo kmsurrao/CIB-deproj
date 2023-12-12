@@ -43,6 +43,8 @@ def setup_output_dir(inp, env):
         subprocess.call(f'mkdir {inp.output_dir}', shell=True, env=env)
     if not os.path.isdir(f'{inp.output_dir}/maps'):
         subprocess.call(f'mkdir {inp.output_dir}/maps', shell=True, env=env)
+    if not os.path.isdir(f'{inp.output_dir}/results_test'):
+        subprocess.call(f'mkdir {inp.output_dir}/results_test', shell=True, env=env)
     if not os.path.isdir(f'{inp.output_dir}/pyilc_yaml_files'):
         subprocess.call(f'mkdir {inp.output_dir}/pyilc_yaml_files', shell=True, env=env)
     if not os.path.isdir(f'{inp.output_dir}/pyilc_outputs'):

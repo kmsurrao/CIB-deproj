@@ -53,9 +53,16 @@ class Info(object):
         self.tsz_map_file = p['tsz_map_file']
         assert type(self.tsz_map_file) is str, "TypeError: tsz_map_file must be str"
         assert os.path.isfile(self.tsz_map_file), "tsz_map_file does not exist"
-        self.halo_files_dir = p['halo_files_dir']
-        assert type(self.halo_files_dir) is str, "TypeError: halo_files_dir must be str"
-        assert os.path.isdir(self.halo_files_dir), "halo_files_dir does not exist"
+        assert 'halo_catalog' in p or 'halo_files_dir' in p, "Either halo_catalog or halo_files_dir must be defined"
+        if 'halo_catalog' in p: #check for halo_catalog before halo_files_dir since using a single halo catalog is faster
+            self.halo_catalog = p['halo_catalog']
+            assert type(self.halo_catalog) is str, "TypeError: halo_catalog must be str"
+            assert os.path.isfile(self.halo_catalog), "halo_catalog does not exist"
+            self.halo_files_dir = None
+        elif 'halo_files_dir' in p:
+            self.halo_files_dir = p['halo_files_dir']
+            assert type(self.halo_files_dir) is str, "TypeError: halo_files_dir must be str"
+            assert os.path.isdir(self.halo_files_dir), "halo_files_dir does not exist"
         assert type(self.pyilc_path) is str, "TypeError: pyilc_path must be str"
         assert os.path.isdir(self.pyilc_path), "pyilc_path does not exist"
 

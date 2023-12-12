@@ -36,8 +36,11 @@ def setup_pyilc(inp, env, beta, suppress_printing=False, inflated=False):
     pyilc_input_params['BinSize'] = inp.ells_per_bin
     
     pyilc_input_params['N_freqs'] = len(inp.frequencies)
-    pyilc_input_params['bandpass_type'] = 'DeltaBandpasses' 
+    pyilc_input_params['bandpass_type'] = 'ActualBandpasses' 
     pyilc_input_params['freqs_delta_ghz'] = inp.frequencies
+
+    # the files where you have saved the bandpasses:
+    pyilc_input_params['freq_bp_files'] = [f'../data/HFI_BANDPASS_F{int(freq)}_reformat.txt' for freq in inp.frequencies]
 
     if inflated:
         pyilc_input_params['freq_map_files'] = \

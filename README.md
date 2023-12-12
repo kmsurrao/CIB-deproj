@@ -15,3 +15,4 @@ Modify or create a yaml file similar to [example.yaml](example.yaml).
 healpy  
 pyyaml  
 tqdm  
+treecorr  

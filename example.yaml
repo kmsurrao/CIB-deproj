@@ -36,7 +36,13 @@ tsz_map_file: '/scratch/09334/ksurrao/agora_planck/tsz.fits'
 
 # directory containing halo files from rot 1 to 30
 # can be downloaded from https://yomori.github.io/agora/index.html
+# must either provide halo_files_dir or a single halo catalog in halo_catalog
 halo_files_dir: '/scratch/09334/ksurrao/halo_files'
+
+# file containing single halo catalog
+# must either provide halo_catalog or a directory of halo files in halo_files_dir
+# if this input is provided, halo_files_dir will be ignored
+halo_catalog: '/scratch/09334/ksurrao/halo_files/haloslc_agora_zsel_0_to_0.3_Msel_1e13_to_1e15.h5'
 
 # path to pyilc repository
 pyilc_path: '/work2/09334/ksurrao/stampede2/GitHub/pyilc'
