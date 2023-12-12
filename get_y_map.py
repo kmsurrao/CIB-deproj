@@ -74,7 +74,8 @@ def setup_pyilc(inp, env, beta, suppress_printing=False, inflated=False):
     stdout = subprocess.DEVNULL if suppress_printing else None
     subprocess.run([f"python {inp.pyilc_path}/pyilc/main.py {ymap_yaml}"], shell=True, env=env, stdout=stdout, stderr=stdout)
     print(f'generated ILC maps for beta={beta:.2f}, inflated={inflated}', flush=True)
-    ymap = hp.read_map(f"{inp.output_dir}/pyilc_outputs/beta_{beta:.2f}_inflated/needletILCmap_component_tSZ_deproject__CIB.fits")
+    inflated_str = 'inflated' if inflated else 'uninflated'
+    ymap = hp.read_map(f"{inp.output_dir}/pyilc_outputs/beta_{beta:.2f}_{inflated_str}/needletILCmap_component_tSZ_deproject_CIB.fits")
     
     
     return ymap

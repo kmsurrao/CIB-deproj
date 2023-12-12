@@ -2,8 +2,6 @@ import numpy as np
 
 def get_planck_noise(inp):
     '''
-    Use this function if providing a single halo catalog file in the input
-
     ARGUMENTS
     ---------
     inp: Info object containing input parameter specifications

@@ -140,6 +140,7 @@ def compare_chi2(inp, env, beta, ra_halos, dec_halos):
     chi2_inflated: float, chi^2 value of <h,y_reconstructed> and <h,y_reconstructed_with_inflated_cib>
     '''
     y_true = hp.read_map(inp.tsz_map_file)
+    y_true = 10**(-6)*hp.ud_grade(y_true, inp.nside)
     y_recon = setup_pyilc(inp, env, beta, suppress_printing=False, inflated=False)
     y_recon_inflated = setup_pyilc(inp, env, beta, suppress_printing=False, inflated=True)
     chi2_true = compute_chi2(inp, y_recon, y_true, ra_halos, dec_halos, beta)

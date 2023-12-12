@@ -33,7 +33,7 @@ class Info(object):
 
         self.frequencies = p['frequencies']
         assert len(self.frequencies) >= 2, "ILC requires at least two frequency channels"
-        assert set(self.frequencies).isssubset({30, 44, 70, 100, 143, 217, 353, 545}), \
+        assert set(self.frequencies).issubset({30, 44, 70, 100, 143, 217, 353, 545}), \
             "frequencies must be subset of Planck channels: {30, 44, 70, 100, 143, 217, 353, 545}"
         # frequencies assumed to be in strictly increasing order
         if ( any( i >= j for i, j in zip(self.frequencies, self.frequencies[1:]))):
