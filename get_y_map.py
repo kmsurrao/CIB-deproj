@@ -24,12 +24,12 @@ def setup_pyilc(inp, env, beta, suppress_printing=False, inflated=False):
     
     pyilc_input_params = {}
     if inflated:
-        pyilc_input_params['output_dir'] = str(inp.output_dir) + f"/pyilc_outputs/beta_{beta}_inflated/"
+        pyilc_input_params['output_dir'] = str(inp.output_dir) + f"/pyilc_outputs/beta_{beta:.2f}_inflated/"
     else:
-        pyilc_input_params['output_dir'] = str(inp.output_dir) + f"/pyilc_outputs/beta_{beta}_uninflated/"
+        pyilc_input_params['output_dir'] = str(inp.output_dir) + f"/pyilc_outputs/beta_{beta:.2f}_uninflated/"
     pyilc_input_params['output_prefix'] = ""
     pyilc_input_params['save_weights'] = "no"
-    pyilc_input_params['param_dict_file'] = f'{inp.output_dir}/pyilc_yaml_files/beta_{beta}.yaml'
+    pyilc_input_params['param_dict_file'] = f'{inp.output_dir}/pyilc_yaml_files/beta_{beta:.2f}.yaml'
     
     pyilc_input_params['ELLMAX'] = inp.ellmax
     pyilc_input_params['wavelet_type'] = 'TopHatHarmonic' 
@@ -40,7 +40,7 @@ def setup_pyilc(inp, env, beta, suppress_printing=False, inflated=False):
     pyilc_input_params['freqs_delta_ghz'] = inp.frequencies
 
     # the files where you have saved the bandpasses:
-    pyilc_input_params['freq_bp_files'] = [f'../data/HFI_BANDPASS_F{int(freq)}_reformat.txt' for freq in inp.frequencies]
+    pyilc_input_params['freq_bp_files'] = [f'{inp.pyilc_path}/data/HFI_BANDPASS_F{int(freq)}_reformat.txt' for freq in inp.frequencies]
 
     if inflated:
         pyilc_input_params['freq_map_files'] = \
@@ -58,13 +58,13 @@ def setup_pyilc(inp, env, beta, suppress_printing=False, inflated=False):
     pyilc_input_params['N_side'] = inp.nside
     pyilc_input_params['ILC_preserved_comp'] = 'tSZ'
     pyilc_input_params['N_deproj'] = 1
-    pyilc_input_params['ILC_deproj_comps'] = 'CIB'
+    pyilc_input_params['ILC_deproj_comps'] = ['CIB']
     pyilc_input_params['N_maps_xcorr'] = 0
 
     if inflated:
-        ymap_yaml = f'{inp.output_dir}/pyilc_yaml_files/beta{beta}_inflated.yml'
+        ymap_yaml = f'{inp.output_dir}/pyilc_yaml_files/beta{beta:.2f}_inflated.yml'
     else:
-        ymap_yaml = f'{inp.output_dir}/pyilc_yaml_files/beta{beta}_uninflated.yml'
+        ymap_yaml = f'{inp.output_dir}/pyilc_yaml_files/beta{beta:.2f}_uninflated.yml'
     with open(ymap_yaml, 'w') as outfile:
         yaml.dump(pyilc_input_params, outfile, default_flow_style=None)
 
@@ -73,9 +73,8 @@ def setup_pyilc(inp, env, beta, suppress_printing=False, inflated=False):
 
     stdout = subprocess.DEVNULL if suppress_printing else None
     subprocess.run([f"python {inp.pyilc_path}/pyilc/main.py {ymap_yaml}"], shell=True, env=env, stdout=stdout, stderr=stdout)
-    if inp.verbose:
-        print(f'generated ILC maps for beta={beta}, inflated={inflated}', flush=True)
-    ymap = hp.read_map(f"{inp.ouptut_dir}/pyilc_outputs/beta_{beta}_inflated/needletILCmap_component_tSZ_deproject__CIB.fits")
+    print(f'generated ILC maps for beta={beta:.2f}, inflated={inflated}', flush=True)
+    ymap = hp.read_map(f"{inp.output_dir}/pyilc_outputs/beta_{beta:.2f}_inflated/needletILCmap_component_tSZ_deproject__CIB.fits")
     
     
     return ymap

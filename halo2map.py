@@ -1,7 +1,8 @@
 import healpy as hp
 from tqdm import tqdm
 import numpy as np
-import h5py
+import pickle
+# import h5py
 
 def halodir2map(inp, save_single_catalog=True):
     '''
@@ -29,7 +30,7 @@ def halodir2map(inp, save_single_catalog=True):
     rot_all = np.arange(1,30)
     for rot in tqdm(rot_all):
         try:
-            df = np.load(halo_ldir+'haloslc_rot_'+str(rot)+'.npy')
+            df = np.load(halo_ldir+'haloslc_rot_'+str(rot)+'.npy', allow_pickle=True)
             z_all = df[:,2]
             ra, dec = df[:,0], df[:,1]
             mvir = df[:,5]
@@ -65,7 +66,7 @@ def halodir2map(inp, save_single_catalog=True):
     cts_mean = np.mean(cts_map)
     density = cts_map/cts_mean - 1.
     density = hp.reorder(density, n2r=True)
-    hp.write_map(f'{inp.output_dir}/maps/halo.fits', density)
+    hp.write_map(f'{inp.output_dir}/maps/halo.fits', density, overwrite=True)
 
     if save_single_catalog:
         hf = h5py.File('haloslc_agora_zsel_0_to_0.3_Msel_1e13_to_1e15.h5', 'w')
@@ -92,15 +93,21 @@ def halofile2map(inp):
     -------
     density: 1D numpy array in RING ordering containing halo density map
     '''
+    # df = h5py.File(inp.halo_catalog, 'r')
+    # ra = df.get('ra')[()]
+    # dec = df.get('dec')[()]
+    # z_all = df.get('z')[()]
+    # mvir = df.get('M')[()]
+    # halo_ra_all = np.array(ra)
+    # halo_dec_all= np.array(dec)
+    # halo_z_all= np.array(z_all)
+    # halo_m_all= np.array(mvir) 
 
-    df = np.load(inp.halo_catalog)
-    z_all = df[:,2]
-    ra, dec = df[:,0], df[:,1]
-    mvir = df[:,5]
-    halo_ra_all = np.array(ra)
-    halo_dec_all= np.array(dec)
-    halo_z_all= np.array(z_all)
-    halo_m_all= np.array(mvir)        
+    # comment out section above and use section below if h5py not working
+    halo_ra_all = pickle.load(open(f'{inp.output_dir}/halo_ra_all.p', 'rb'))  
+    halo_dec_all = pickle.load(open(f'{inp.output_dir}/halo_dec_all.p', 'rb'))    
+    halo_z_all = pickle.load(open(f'{inp.output_dir}/halo_z_all.p', 'rb')) 
+    halo_m_all = pickle.load(open(f'{inp.output_dir}/halo_m_all.p', 'rb'))      
 
     #you can change the selection to have more or less halos to boost the SNR of correlations.
     indsel_z = np.where((halo_z_all > 0.0) & (halo_z_all < 0.25))[0]
@@ -121,6 +128,6 @@ def halofile2map(inp):
     cts_mean = np.mean(cts_map)
     density = cts_map/cts_mean - 1.
     density = hp.reorder(density, n2r=True)
-    hp.write_map(f'{inp.output_dir}/maps/halo.fits', density)
+    hp.write_map(f'{inp.output_dir}/maps/halo.fits', density, overwrite=True)
 
     return density, ra_halos, dec_halos

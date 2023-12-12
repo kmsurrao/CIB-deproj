@@ -6,7 +6,7 @@ import multiprocessing as mp
 import pickle
 import matplotlib.pyplot as plt
 from input import Info
-from halo2map import convert_halo2map
+from halo2map import halodir2map, halofile2map
 from cross_corr import compare_chi2
 from utils import *
 
@@ -27,17 +27,23 @@ def main():
     setup_output_dir(inp, env)
     
     # get map of halos and maps at each frequency (both with and without inflated CIB)
-    h, ra_halos, dec_halos = convert_halo2map(inp)
+    if inp.halo_catalog is not None:                                                  
+        h, ra_halos, dec_halos = halofile2map(inp)
+    else:
+        h, ra_halos, dec_halos = halodir2map(inp)
+    print('got ra and dec of halos', flush=True)
     get_freq_maps(inp)
+    print('got frequency maps',	flush=True)
 
-    # run main computation
-    beta_arr = np.arange(inp.beta_range[0], inp.beta_range[1], num=inp.num_beta_vals)
+    # run main computation                                                                                                              
+    beta_arr = np.linspace(inp.beta_range[0], inp.beta_range[1], num=inp.num_beta_vals)
     pool = mp.Pool(inp.num_parallel)
     results = pool.starmap(compare_chi2, [(inp, env, beta, ra_halos, dec_halos) for beta in beta_arr])
     pool.close()
     results = np.array(results, dtype=np.float32)
     chi2_true_arr = results[:,0]
     chi2_inflated_arr = results[:,1]
+    print('got chi2 values', flush=True)
 
     # save files and plot
     pickle.dump(beta_arr, open(f'{inp.output_dir}/beta_arr.p', 'wb'))

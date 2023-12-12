@@ -60,7 +60,7 @@ def compute_chi2(inp, y1, y2, ra_halos, dec_halos, beta):
     ra_hp, dec_hp = hp.pix2ang(inp.nside, ipix=np.arange(hp.nside2npix(inp.nside)),lonlat=True)
     
     save_dir = f'{inp.output_dir}/results_test/'
-    save_filename_jk_obj = f'jk_obj_test_beta{beta}.pkl'
+    save_filename_jk_obj = f'jk_obj_test_beta{beta:.2f}.pkl'
 
     # number of patches to divide the full sky on. More of these, better the covariance estimate would be. Just make sure the size of patches is larger than the maximum separation you are interested in.
     njk = 256

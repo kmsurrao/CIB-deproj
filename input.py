@@ -30,8 +30,15 @@ class Info(object):
             assert type(self.ells_per_bin) is int and 1 <= self.ells_per_bin <= self.ellmax-2, "ells_per_bin must be int with 1 <= ells_per_bin <= ellmax-2"
         else:
             self.ells_per_bin = 1
+
         self.frequencies = p['frequencies']
         assert len(self.frequencies) >= 2, "ILC requires at least two frequency channels"
+        assert set(self.frequencies).isssubset({30, 44, 70, 100, 143, 217, 353, 545}), \
+            "frequencies must be subset of Planck channels: {30, 44, 70, 100, 143, 217, 353, 545}"
+        # frequencies assumed to be in strictly increasing order
+        if ( any( i >= j for i, j in zip(self.frequencies, self.frequencies[1:]))):
+            raise AssertionError
+        
         self.beta_range = p['beta_range']
         assert len(self.beta_range) == 2, "beta_range must consist of two values corresponding to ends of interval"
         self.num_beta_vals = p['num_beta_vals']
@@ -39,7 +46,7 @@ class Info(object):
         assert self.num_beta_vals >= 1, "num_beta_vals must be at least 1"
         if 'num_parallel' in p:
             self.num_parallel = p['num_parallel']
-            assert self.num_parallel is int, "num_parallel must be an integer"
+            assert type(self.num_parallel) is int, "num_parallel must be an integer"
             assert self.num_parallel >= 1, "num_parallel must be at least 1"
         else:
             self.num_parallel = 1
@@ -60,9 +67,11 @@ class Info(object):
             assert os.path.isfile(self.halo_catalog), "halo_catalog does not exist"
             self.halo_files_dir = None
         elif 'halo_files_dir' in p:
+            self.halo_catalog = None
             self.halo_files_dir = p['halo_files_dir']
             assert type(self.halo_files_dir) is str, "TypeError: halo_files_dir must be str"
             assert os.path.isdir(self.halo_files_dir), "halo_files_dir does not exist"
+        self.pyilc_path = p['pyilc_path']
         assert type(self.pyilc_path) is str, "TypeError: pyilc_path must be str"
         assert os.path.isdir(self.pyilc_path), "pyilc_path does not exist"
 
