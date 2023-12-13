@@ -102,6 +102,9 @@ def get_freq_maps(inp):
         cib_map = 10**(-6)*hp.ud_grade(cib_map, inp.nside) #units of K
         freq_map_uninflated = tsz_map + cib_map + noise_map
         freq_map_inflated = tsz_map + inp.cib_inflation*cib_map + noise_map
-        hp.write_map(f'{inp.output_dir}/maps/uninflated_{freq}.fits', freq_map_uninflated, overwrite=True)
-        hp.write_map(f'{inp.output_dir}/maps/inflated_{freq}.fits', freq_map_inflated, overwrite=True)
+        hp.write_map(f'{inp.output_dir}/maps/uninflated_{freq}.fits', freq_map_uninflated, overwrite=True, dtype=np.float32)
+        hp.write_map(f'{inp.output_dir}/maps/inflated_{freq}.fits', freq_map_inflated, overwrite=True, dtype=np.float32)
+        if inp.debug:
+            print(f'saved {inp.output_dir}/maps/uninflated_{freq}.fits', flush=True)
+            print(f'saved {inp.output_dir}/maps/inflated_{freq}.fits', flush=True)
     return

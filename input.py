@@ -84,3 +84,4 @@ class Info(object):
 
         self.output_dir = p['output_dir']
         assert type(self.output_dir) is str, "TypeError: output_dir must be str"
+        self.debug = p['debug']

@@ -33,10 +33,11 @@ def main():
     else:
         h, ra_halos, dec_halos = halodir2map(inp)
     print('got ra and dec of halos', flush=True)
+    print('Getting maps at different frequencies...', flush=True)
     get_freq_maps(inp)
-    print('got frequency maps',	flush=True)
 
-    # run main computation                                                                                                              
+    # run main computation
+    print('Running main computation...\n', flush=True)                                                                                                              
     beta_arr = np.linspace(inp.beta_range[0], inp.beta_range[1], num=inp.num_beta_vals)
     pool = mp.Pool(inp.num_parallel)
     inputs = [(inp, env, beta, ra_halos, dec_halos) for beta in beta_arr]

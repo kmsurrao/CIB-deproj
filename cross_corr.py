@@ -64,7 +64,7 @@ def compute_chi2(inp, y1, y2, ra_halos, dec_halos, beta):
 
     # number of patches to divide the full sky on. More of these, better the covariance estimate would be. Just make sure the size of patches is larger than the maximum separation you are interested in.
     njk = 256
-    nthreads = 256//inp.num_beta_vals
+    nthreads = 256//(4*inp.num_beta_vals)
     # This is the accuracy setting. If the bin_slop is set to 0.0, it will take longer to run but correlation would be correct. If you want to run it faster, increase the bin_slop to 0.1 or 0.2. This will make the code run faster, but the correlation estimate will be less accurate.
     bin_slop = 0.0
 
@@ -89,10 +89,10 @@ def compute_chi2(inp, y1, y2, ra_halos, dec_halos, beta):
     y2_cat = treecorr.Catalog(ra=ra_hp, dec=dec_hp, k=y2, ra_units='degrees', dec_units='degrees')
 
     # create the correlation objects:
-    hy1 = treecorr.NKCorrelation(nbins=nrad, min_sep=minrad, max_sep=maxrad, sep_units='arcmin', verbose=0,num_threads=nthreads, bin_slop=bin_slop, var_method='jackknife')
-    hy2 = treecorr.NKCorrelation(nbins=nrad, min_sep=minrad, max_sep=maxrad, sep_units='arcmin', verbose=0,num_threads=nthreads, bin_slop=bin_slop, var_method='jackknife')
-    ry1 = treecorr.NKCorrelation(nbins=nrad, min_sep=minrad, max_sep=maxrad, sep_units='arcmin', verbose=0,num_threads=nthreads, bin_slop=bin_slop, var_method='jackknife')
-    ry2 = treecorr.NKCorrelation(nbins=nrad, min_sep=minrad, max_sep=maxrad, sep_units='arcmin', verbose=0,num_threads=nthreads, bin_slop=bin_slop, var_method='jackknife')
+    hy1 = treecorr.NKCorrelation(nbins=nrad, min_sep=minrad, max_sep=maxrad, sep_units='arcmin', verbose=0, num_threads=nthreads, bin_slop=bin_slop, var_method='jackknife')
+    hy2 = treecorr.NKCorrelation(nbins=nrad, min_sep=minrad, max_sep=maxrad, sep_units='arcmin', verbose=0, num_threads=nthreads, bin_slop=bin_slop, var_method='jackknife')
+    ry1 = treecorr.NKCorrelation(nbins=nrad, min_sep=minrad, max_sep=maxrad, sep_units='arcmin', verbose=0, num_threads=nthreads, bin_slop=bin_slop, var_method='jackknife')
+    ry2 = treecorr.NKCorrelation(nbins=nrad, min_sep=minrad, max_sep=maxrad, sep_units='arcmin', verbose=0, num_threads=nthreads, bin_slop=bin_slop, var_method='jackknife')
 
     hy1.process(datapoint_cat, y1_cat)
     hy2.process(datapoint_cat, y2_cat)
@@ -133,8 +133,8 @@ def compare_chi2(inp, env, beta, ra_halos, dec_halos):
     '''
     y_true = hp.read_map(inp.tsz_map_file)
     y_true = 10**(-6)*hp.ud_grade(y_true, inp.nside)
-    y_recon = setup_pyilc(inp, env, beta, suppress_printing=True, inflated=False)
-    y_recon_inflated = setup_pyilc(inp, env, beta, suppress_printing=True, inflated=True)
+    y_recon = setup_pyilc(inp, env, beta, suppress_printing=True, inflated=False, suppress_printing=(not inp.debug))
+    y_recon_inflated = setup_pyilc(inp, env, beta, suppress_printing=True, inflated=True, suppress_printing=(not inp.debug))
     chi2_true = compute_chi2(inp, y_recon, y_true, ra_halos, dec_halos, beta)
     chi2_inflated = compute_chi2(inp, y_recon, y_recon_inflated, ra_halos, dec_halos, beta)
     return chi2_true, chi2_inflated
