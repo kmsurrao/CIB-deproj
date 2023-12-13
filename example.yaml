@@ -15,15 +15,15 @@ frequencies: [100, 143, 217, 353, 545]
 beta_range: [1.1, 1.7]
 
 # number of beta values to test
-num_beta_vals: 3
+num_beta_vals: 20
 
 # number of beta values to test in parallel
 # if this input is not provided, no parallelization is assumed (num_parallel=1)
-num_parallel: 3
+num_parallel: 5
 
 # factor by which to inflate CIB and deproject for comparison to uninflated 
 # CIB that's deprojected
-cib_inflation: 2
+cib_inflation: 2.0
 
 # directory containing agora CIB maps at each frequency in frequencies
 # on NERSC: /global/cfs/cdirs/act/data/agora_sims/cib/planck/len/uk

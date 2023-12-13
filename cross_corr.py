@@ -48,8 +48,8 @@ def compute_chi2(inp, y1, y2, ra_halos, dec_halos, beta):
     y1: 1D numpy array in RING format containing reconstructed y map
     y2: 1D numpy array in RING format containing true y map
         (or y map with inflated CIB)
-    ra_halos:
-    dec_halos:
+    ra_halos: ndarray containing ra of halos
+    dec_halos: ndarray containing dec of halos
     beta: float, beta value used for CIB deprojection (just used for file naming here)
 
     RETURNS
@@ -64,7 +64,7 @@ def compute_chi2(inp, y1, y2, ra_halos, dec_halos, beta):
 
     # number of patches to divide the full sky on. More of these, better the covariance estimate would be. Just make sure the size of patches is larger than the maximum separation you are interested in.
     njk = 256
-    nthreads = 256
+    nthreads = 256//inp.num_beta_vals
     # This is the accuracy setting. If the bin_slop is set to 0.0, it will take longer to run but correlation would be correct. If you want to run it faster, increase the bin_slop to 0.1 or 0.2. This will make the code run faster, but the correlation estimate will be less accurate.
     bin_slop = 0.0
 
@@ -121,7 +121,6 @@ def compute_chi2(inp, y1, y2, ra_halos, dec_halos, beta):
     return chi2
 
 
-
 def compare_chi2(inp, env, beta, ra_halos, dec_halos):
     '''
     ARGUMENTS
@@ -131,8 +130,8 @@ def compare_chi2(inp, env, beta, ra_halos, dec_halos):
     y1: 1D numpy array in RING format containing reconstructed y map
     y2: 1D numpy array in RING format containing true y map
         (or y map with inflated CIB)
-    ra_halos:
-    dec_halos:
+    ra_halos: ndarray containing ra of halos
+    dec_halos: ndarray containing dec of halos
 
     RETURNS
     -------
@@ -146,3 +145,19 @@ def compare_chi2(inp, env, beta, ra_halos, dec_halos):
     chi2_true = compute_chi2(inp, y_recon, y_true, ra_halos, dec_halos, beta)
     chi2_inflated = compute_chi2(inp, y_recon, y_recon_inflated, ra_halos, dec_halos, beta)
     return chi2_true, chi2_inflated
+
+
+def compare_chi2_star(args):
+    '''
+    Useful for using multiprocessing imap
+    (imap supports tqdm but starmap does not)
+
+    ARGUMENTS
+    ---------
+    args: arguments to function compare_chi2
+
+    RETURNS
+    -------
+    function of *args, compare_chi2(inp, env, beta, ra_halos, dec_halos)
+    '''
+    return compare_chi2(*args)

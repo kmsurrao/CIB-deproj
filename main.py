@@ -1,13 +1,14 @@
 
 import argparse
 import os
+import tqdm
 import numpy as np
 import multiprocessing as mp
 import pickle
 import matplotlib.pyplot as plt
 from input import Info
 from halo2map import halodir2map, halofile2map
-from cross_corr import compare_chi2
+from cross_corr import compare_chi2_star
 from utils import *
 
 
@@ -38,7 +39,8 @@ def main():
     # run main computation                                                                                                              
     beta_arr = np.linspace(inp.beta_range[0], inp.beta_range[1], num=inp.num_beta_vals)
     pool = mp.Pool(inp.num_parallel)
-    results = pool.starmap(compare_chi2, [(inp, env, beta, ra_halos, dec_halos) for beta in beta_arr])
+    inputs = [(inp, env, beta, ra_halos, dec_halos) for beta in beta_arr]
+    results = list(tqdm.tqdm(pool.imap(compare_chi2_star, inputs), total=len(beta_arr)))
     pool.close()
     results = np.array(results, dtype=np.float32)
     chi2_true_arr = results[:,0]
@@ -54,6 +56,8 @@ def main():
     plt.xlabel(r'$\beta$')
     plt.ylabel(r'${\chi}^2$')
     plt.legend()
+    plt.yscale('log')
+    plt.grid(which='both')
     plt.savefig(f'{inp.output_dir}/chi2.png')
     
     return
