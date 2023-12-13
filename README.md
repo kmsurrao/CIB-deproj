@@ -16,4 +16,3 @@ healpy
 pyyaml  
 tqdm  
 treecorr  
-tqdm  
