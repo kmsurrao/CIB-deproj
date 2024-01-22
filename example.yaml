@@ -25,6 +25,10 @@ num_parallel: 5
 # CIB that's deprojected
 cib_inflation: 2.0
 
+# whether to compute Gaussian covariance in harmonic space or 
+# use real space correlations with treecorr
+harmonic_space: True
+
 # directory containing agora CIB maps at each frequency in frequencies
 # on NERSC: /global/cfs/cdirs/act/data/agora_sims/cib/planck/len/uk
 # CIB maps are assumed to be in units of uK

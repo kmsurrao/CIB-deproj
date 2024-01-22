@@ -40,7 +40,7 @@ def randsphere(num, ra_range=[0,360], dec_range=[-90,90]):
 
 
 
-def compute_chi2(inp, y1, y2, ra_halos, dec_halos, beta):
+def compute_chi2_real_space(inp, y1, y2, ra_halos, dec_halos, beta):
     '''
     ARGUMENTS
     ---------
@@ -63,15 +63,15 @@ def compute_chi2(inp, y1, y2, ra_halos, dec_halos, beta):
     save_filename_jk_obj = f'jk_obj_test_beta{beta:.2f}.pkl'
 
     # number of patches to divide the full sky on. More of these, better the covariance estimate would be. Just make sure the size of patches is larger than the maximum separation you are interested in.
-    njk = 256
+    njk = 512
     nthreads = 256//(4*inp.num_beta_vals)
     # This is the accuracy setting. If the bin_slop is set to 0.0, it will take longer to run but correlation would be correct. If you want to run it faster, increase the bin_slop to 0.1 or 0.2. This will make the code run faster, but the correlation estimate will be less accurate.
     bin_slop = 0.0
 
     # minrad and maxrad are the minimum and maximum separation you are interested in. This is in arcmin. nrad is the number of bins you want to divide the separation range into.
-    minrad = 1.0
+    minrad = 3.0
     maxrad = 100.0
-    nrad = 20
+    nrad = 10
 
     # Load the catalogs in treecorr format
     if os.path.isfile(save_dir + save_filename_jk_obj):
@@ -114,17 +114,90 @@ def compute_chi2(inp, y1, y2, ra_halos, dec_halos, beta):
     return chi2
 
 
-def compare_chi2(inp, env, beta, ra_halos, dec_halos):
+def multifrequency_cov(inp, S, N):
+    '''
+    Computes multifrequency Gaussian covariance in harmonic space
+
+    ARGUMENTS
+    ---------
+    inp: Info object containing input parameter specifications
+    S: 3D numpy array of shape (Nfreqs, Nfreqs, ellmax+1) containing power spectrum of signal
+    N: 3D numpy array of shape (Nfreqs, Nfreqs, ellmax+1) containing power spectrum of noise
+        (only nonzero for frequency-frequency auto-spectra)
+
+    RETURNS
+    -------
+    covar: 5D numpy array of shape (Nfreqs, Nfreqs, Nfreqs, Nfreqs, ellmax+1)
+        containing Gaussian covariance matrix
+    '''
+    ells = np.arange(inp.ellmax+1)
+    Nmodes = 1/(2*ells+1)
+    covar = np.einsum('l,ikl,jml->ijkml', Nmodes, S, S) + np.einsum('l,iml,jkl->ijkml', Nmodes, S, S) \
+          + np.einsum('l,ikl,jml->ijkml', Nmodes, S, N) + np.einsum('l,jml,ikl->ijkml', Nmodes, S, N) \
+          + np.einsum('l,iml,jkl->ijkml', Nmodes, S, N) + np.einsum('l,jkl,iml->ijkml', Nmodes, S, N) \
+          + np.einsum('l,ikl,jml->ijkml', Nmodes, N, N) + np.einsum('l,jkl,iml->ijkml', Nmodes, N, N)
+    covar /= Nmodes
+    return covar
+
+
+def cov(inp, Cl):
+    '''
+    Computes Gaussian covariance in harmonic space
+
+    ARGUMENTS
+    ---------
+    inp: Info object containing input parameter specifications
+    Cl: numpy array of shape (ellmax+1, ) containing power spectrum
+
+    RETURNS
+    -------
+    covar: 2D numpy array of shape (ellmax+1, ellmax+1)
+        containing Gaussian covariance matrix
+    '''
+    ells = np.arange(inp.ellmax+1)
+    Nmodes = 1/(2*ells+1)
+    covar = np.diag(Nmodes*Cl**2)
+    return covar
+
+
+def compute_chi2_harmonic_space(inp, y1, y2, h):
     '''
     ARGUMENTS
     ---------
     inp: Info object containing input parameter specifications
+    y1: 1D numpy array in RING format containing reconstructed y map
+    y2: 1D numpy array in RING format containing true y map
+        (or y map with inflated CIB)
+    h: 1D numpy array in RING format containing halo map
+
+    RETURNS
+    -------
+    chi2: float, chi^2 value of <h,y1> and <h,y2>
+    '''
+    hy1 = hp.anafast(h, y1, lmax=inp.ellmax)
+    hy2 = hp.anafast(h, y2, lmax=inp.ellmax)
+    cov_hy1 = cov(inp, hy1)
+    cov_hy2 = cov(inp, hy2)
+    cov_tot = cov_hy1 + cov_hy2
+    diff_DV = hy1-hy2
+    chi2 = np.dot(diff_DV, np.dot(np.linalg.inv(cov_tot), diff_DV))
+    return chi2
+
+
+def compare_chi2(inp, env, beta, ra_halos, dec_halos, h):
+    '''
+    ARGUMENTS
+    ---------
+    inp: Info object containing input parameter specifications
+    env: environment object
+    beta: float, value of beta for CIB deprojection
     h: 1D numpy array in RING format containing map of halos
     y1: 1D numpy array in RING format containing reconstructed y map
     y2: 1D numpy array in RING format containing true y map
         (or y map with inflated CIB)
     ra_halos: ndarray containing ra of halos
     dec_halos: ndarray containing dec of halos
+    h: 1D numpy array in RING format containing halo map
 
     RETURNS
     -------
@@ -133,10 +206,17 @@ def compare_chi2(inp, env, beta, ra_halos, dec_halos):
     '''
     y_true = hp.read_map(inp.tsz_map_file)
     y_true = 10**(-6)*hp.ud_grade(y_true, inp.nside)
-    y_recon = setup_pyilc(inp, env, beta, suppress_printing=True, inflated=False, suppress_printing=(not inp.debug))
-    y_recon_inflated = setup_pyilc(inp, env, beta, suppress_printing=True, inflated=True, suppress_printing=(not inp.debug))
-    chi2_true = compute_chi2(inp, y_recon, y_true, ra_halos, dec_halos, beta)
-    chi2_inflated = compute_chi2(inp, y_recon, y_recon_inflated, ra_halos, dec_halos, beta)
+    y_recon = setup_pyilc(inp, env, beta, inflated=False, suppress_printing=(not inp.debug))
+    y_recon_inflated = setup_pyilc(inp, env, beta, inflated=True, suppress_printing=(not inp.debug))
+    if inp.harmonic_space:
+        chi2_true = compute_chi2_harmonic_space(inp, y_recon, y_true, h)
+        chi2_inflated = compute_chi2_harmonic_space(inp, y_recon, y_recon_inflated, h)
+    else:   
+        chi2_true = compute_chi2_real_space(inp, y_recon, y_true, ra_halos, dec_halos, beta)
+        chi2_inflated = compute_chi2_real_space(inp, y_recon, y_recon_inflated, ra_halos, dec_halos, beta)
+    if inp.debug:
+        print(f'chi2_true for beta={beta}: {chi2_true}', flush=True)
+        print(f'chi2_inflated for beta={beta}: {chi2_inflated}', flush=True)
     return chi2_true, chi2_inflated
 
 
@@ -151,6 +231,6 @@ def compare_chi2_star(args):
 
     RETURNS
     -------
-    function of *args, compare_chi2(inp, env, beta, ra_halos, dec_halos)
+    function of *args, compare_chi2(inp, env, beta, ra_halos, dec_halos, h)
     '''
     return compare_chi2(*args)

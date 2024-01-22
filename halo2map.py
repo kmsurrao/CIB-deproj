@@ -66,7 +66,7 @@ def halodir2map(inp, save_single_catalog=True):
     cts_mean = np.mean(cts_map)
     density = cts_map/cts_mean - 1.
     density = hp.reorder(density, n2r=True)
-    hp.write_map(f'{inp.output_dir}/maps/halo.fits', density, overwrite=True)
+    hp.write_map(f'{inp.output_dir}/maps/halo.fits', density, overwrite=True, dtype=np.float32)
 
     if save_single_catalog:
         hf = h5py.File('haloslc_agora_zsel_0_to_0.3_Msel_1e13_to_1e15.h5', 'w')
@@ -128,6 +128,6 @@ def halofile2map(inp):
     cts_mean = np.mean(cts_map)
     density = cts_map/cts_mean - 1.
     density = hp.reorder(density, n2r=True)
-    hp.write_map(f'{inp.output_dir}/maps/halo.fits', density, overwrite=True)
+    hp.write_map(f'{inp.output_dir}/maps/halo.fits', density, overwrite=True, dtype=np.float32)
 
     return density, ra_halos, dec_halos

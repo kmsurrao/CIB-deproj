@@ -1,4 +1,3 @@
-
 import argparse
 import os
 import tqdm
@@ -37,16 +36,16 @@ def main():
     get_freq_maps(inp)
 
     # run main computation
-    print('Running main computation...\n', flush=True)                                                                                                              
+    print('Running main computation...', flush=True)                                                                                                              
     beta_arr = np.linspace(inp.beta_range[0], inp.beta_range[1], num=inp.num_beta_vals)
     pool = mp.Pool(inp.num_parallel)
-    inputs = [(inp, env, beta, ra_halos, dec_halos) for beta in beta_arr]
+    inputs = [(inp, env, beta, ra_halos, dec_halos, h) for beta in beta_arr]
     results = list(tqdm.tqdm(pool.imap(compare_chi2_star, inputs), total=len(beta_arr)))
     pool.close()
     results = np.array(results, dtype=np.float32)
     chi2_true_arr = results[:,0]
     chi2_inflated_arr = results[:,1]
-    print('got chi2 values', flush=True)
+    print('\ngot chi2 values', flush=True)
 
     # save files and plot
     pickle.dump(beta_arr, open(f'{inp.output_dir}/beta_arr.p', 'wb'))

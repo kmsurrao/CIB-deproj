@@ -4,6 +4,7 @@ import subprocess
 import os
 import yaml
 from planck_noise import get_planck_noise
+from inpaint_pixels import initial_masking
 
 def write_beta_yamls(inp):
     '''
@@ -93,6 +94,7 @@ def get_freq_maps(inp):
     tsz_response_vec = tsz_spectral_response(inp.frequencies)
     ymap = hp.read_map(inp.tsz_map_file)
     ymap = 10**(-6)*hp.ud_grade(ymap, inp.nside) #units of K
+    cib_map_150 = hp.read_map(f'{inp.cib_map_dir}/agora_act_150ghz_lcibNG_uk.fits')
     for i, freq in enumerate(inp.frequencies):
         idx = planck_freqs.index(freq)
         PS_noise = PS_noise_Planck[idx]
@@ -100,6 +102,7 @@ def get_freq_maps(inp):
         tsz_map = tsz_response_vec[i]*ymap
         cib_map = hp.read_map(f'{inp.cib_map_dir}/mdpl2_len_mag_cibmap_planck_{freq}_uk.fits')
         cib_map = 10**(-6)*hp.ud_grade(cib_map, inp.nside) #units of K
+        cib_map = initial_masking(inp, cib_map, cib_map_150)
         freq_map_uninflated = tsz_map + cib_map + noise_map
         freq_map_inflated = tsz_map + inp.cib_inflation*cib_map + noise_map
         hp.write_map(f'{inp.output_dir}/maps/uninflated_{freq}.fits', freq_map_uninflated, overwrite=True, dtype=np.float32)
