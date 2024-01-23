@@ -147,7 +147,10 @@ def cov(inp, Cl):
     ARGUMENTS
     ---------
     inp: Info object containing input parameter specifications
-    Cl: numpy array of shape (ellmax+1, ) containing power spectrum
+    Cl: 3D numpy array of shape (2, 2, ellmax+1) containing power spectra
+        Cl[0,0] = Cl^{hh}
+        Cl[0,1] = Cl[1,0] = Cl^{hy}
+        Cl[1,1] = Cl^{yy}
 
     RETURNS
     -------
@@ -156,7 +159,7 @@ def cov(inp, Cl):
     '''
     ells = np.arange(inp.ellmax+1)
     Nmodes = 1/(2*ells+1)
-    covar = np.diag(Nmodes*Cl**2)
+    covar = np.diag(Nmodes*(Cl[0,1]**2 + Cl[0,0]*Cl[1,1]))
     return covar
 
 
@@ -176,8 +179,11 @@ def compute_chi2_harmonic_space(inp, y1, y2, h):
     '''
     hy1 = hp.anafast(h, y1, lmax=inp.ellmax)
     hy2 = hp.anafast(h, y2, lmax=inp.ellmax)
-    cov_hy1 = cov(inp, hy1)
-    cov_hy2 = cov(inp, hy2)
+    hh = hp.anafast(h, lmax=inp.ellmax)
+    y1y1 = hp.anafast(y1, lmax=inp.ellmax)
+    y2y2 = hp.anafast(y2, lmax=inp.ellmax)
+    cov_hy1 = cov(inp, np.array([[hh, hy1], [hy1, y1y1]]))
+    cov_hy2 = cov(inp, np.array([[hh, hy2], [hy2, y2y2]]))
     cov_tot = cov_hy1 + cov_hy2
     diff_DV = hy1-hy2
     chi2 = np.dot(diff_DV, np.dot(np.linalg.inv(cov_tot), diff_DV))

@@ -49,11 +49,9 @@ def setup_pyilc(inp, env, beta, suppress_printing=False, inflated=False):
         pyilc_input_params['freq_map_files'] = \
             [f'{inp.output_dir}/maps/uninflated_{freq}.fits' for freq in inp.frequencies]
 
-
-    beam_dict = {30:32.29, 44:27.94, 70:13.08, 100:9.66, 143:7.22, 217:4.92, 353:4.90, 545:4.67}
     pyilc_input_params['beam_type'] = 'Gaussians'
-    pyilc_input_params['beam_FWHM_arcmin'] = [beam_dict[freq] for freq in inp.frequencies]
-    pyilc_input_params['perform_ILC_at_beam'] = 10 # the FWHM of the common beam to convolve to before performing ILC (in arcmin)
+    pyilc_input_params['beam_FWHM_arcmin'] = [1.4]*len(inp.frequencies)
+    pyilc_input_params['perform_ILC_at_beam'] = 1.4 # the FWHM of the common beam to convolve to before performing ILC (in arcmin)
 
     pyilc_input_params['N_side'] = inp.nside
     pyilc_input_params['ILC_preserved_comp'] = 'tSZ'
