@@ -46,6 +46,8 @@ def main():
     chi2_true_arr = results[:,0]
     chi2_inflated_arr = results[:,1]
     print('\ngot chi2 values', flush=True)
+    print('chi2_true_arr: ', chi2_true_arr, flush=True)
+    print('chi2_inflated_arr: ', chi2_inflated_arr, flush=True)
 
     # save files and plot
     pickle.dump(beta_arr, open(f'{inp.output_dir}/beta_arr.p', 'wb'))

@@ -205,7 +205,7 @@ def compare_chi2(inp, env, beta, ra_halos, dec_halos, h):
     chi2_inflated: float, chi^2 value of <h,y_reconstructed> and <h,y_reconstructed_with_inflated_cib>
     '''
     y_true = hp.read_map(inp.tsz_map_file)
-    y_true = 10**(-6)*hp.ud_grade(y_true, inp.nside)
+    y_true = hp.ud_grade(y_true, inp.nside)
     y_recon = setup_pyilc(inp, env, beta, inflated=False, suppress_printing=(not inp.debug))
     y_recon_inflated = setup_pyilc(inp, env, beta, inflated=True, suppress_printing=(not inp.debug))
     if inp.harmonic_space:

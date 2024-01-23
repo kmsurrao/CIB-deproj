@@ -47,7 +47,7 @@ def initial_masking(inp, map_, map_150):
         Very bright values in the input map are inpainted
     '''
     mask = np.ones_like(map_)
-    cut_val = JytoK(150, inp.nside)*0.1
+    cut_val = JytoK(150, inp.nside)*0.1*10**6
     mask[map_150 >= cut_val] = 0 #mask pixels >= 100 mJy at 150 GHz
     neighbors = hp.pixelfunc.get_all_neighbours(inp.nside, np.where(mask==0)).flatten()
     mask[neighbors] = 0
