@@ -27,7 +27,7 @@ def write_beta_yamls(inp):
     return
 
 
-def setup_output_dir(inp, env):
+def setup_output_dir(inp, env, standard_ilc=False):
     '''
     Sets up directory for output files
 
@@ -35,6 +35,7 @@ def setup_output_dir(inp, env):
     ---------
     inp: Info() object containing input specifications
     env: environment object
+    standard_ilc: Bool, whether running standard ILC without CIB deprojection
 
     RETURNS
     -------
@@ -50,12 +51,18 @@ def setup_output_dir(inp, env):
         subprocess.call(f'mkdir {inp.output_dir}/pyilc_yaml_files', shell=True, env=env)
     if not os.path.isdir(f'{inp.output_dir}/pyilc_outputs'):
         subprocess.call(f'mkdir {inp.output_dir}/pyilc_outputs', shell=True, env=env)
-    beta_arr = np.linspace(inp.beta_range[0], inp.beta_range[1], num=inp.num_beta_vals)
-    write_beta_yamls(inp)
-    for beta in beta_arr:
+    if not standard_ilc:
+        beta_arr = np.linspace(inp.beta_range[0], inp.beta_range[1], num=inp.num_beta_vals)
+        write_beta_yamls(inp)
+        for beta in beta_arr:
+            for i in ['inflated', 'uninflated']:
+                if not os.path.isdir(f'{inp.output_dir}/pyilc_outputs/beta_{beta:.2f}_{i}'):
+                    subprocess.call(f'mkdir {inp.output_dir}/pyilc_outputs/beta_{beta:.2f}_{i}', shell=True, env=env)
+    else:
         for i in ['inflated', 'uninflated']:
-            if not os.path.isdir(f'{inp.output_dir}/pyilc_outputs/beta_{beta:.2f}_{i}'):
-                subprocess.call(f'mkdir {inp.output_dir}/pyilc_outputs/beta_{beta:.2f}_{i}', shell=True, env=env)
+            if not os.path.isdir(f'{inp.output_dir}/pyilc_outputs/{i}'):
+                subprocess.call(f'mkdir {inp.output_dir}/pyilc_outputs/{i}', shell=True, env=env)
+
     return
 
 

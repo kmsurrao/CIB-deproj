@@ -1,0 +1,55 @@
+import argparse
+import os
+import numpy as np
+import matplotlib.pyplot as plt
+from input import Info
+from get_y_map import setup_pyilc
+from utils import *
+
+def main():
+
+    # main input file containing most specifications 
+    parser = argparse.ArgumentParser(description="Optimal beta value for CIB deprojection.")
+    parser.add_argument("--config", default="example.yaml")
+    args = parser.parse_args()
+    input_file = args.config
+
+    # read in the input file and set up relevant info object
+    inp = Info(input_file)
+
+    # set up output directory
+    env = os.environ.copy()
+    setup_output_dir(inp, env, standard_ilc=True)
+    
+    # get maps at each frequency (both with and without inflated CIB)
+    print('Getting maps at different frequencies...', flush=True)
+    get_freq_maps(inp)
+
+    # run pyilc
+    print('Running pyilc...', flush=True)  
+    y_uninflated_cib = setup_pyilc(inp, env, 1.0, suppress_printing=False, inflated=False, standard_ilc=True)
+    y_inflated_cib = setup_pyilc(inp, env, 1.0, suppress_printing=False, inflated=True, standard_ilc=True) 
+    y_true = hp.ud_grade(hp.read_map(inp.tsz_map_file), inp.nside)
+
+    # get power spectra and plot
+    y_uninfl_auto = hp.anafast(y_uninflated_cib, lmax=inp.ellmax)
+    y_infl_auto = hp.anafast(y_inflated_cib, lmax=inp.ellmax)
+    y_true_auto = hp.anafast(y_true, lmax=inp.ellmax)
+    ells = np.arange(inp.ellmax+1)
+    to_dl = ells*(ells+1)/2/np.pi
+    start = 2
+    plt.plot(ells[start:], (to_dl*y_uninfl_auto)[start:], label='y recon.')  
+    plt.plot(ells[start:], (to_dl*y_infl_auto)[start:], label='y recon. (inflated CIB)')    
+    plt.plot(ells[start:], (to_dl*y_true_auto)[start:], label='y true')
+    plt.legend()
+    plt.yscale('log')
+    plt.grid(which='both')
+    plt.xlabel(r'$\ell$')
+    plt.ylabel(r'$\ell(\ell+1)C_\ell/(2\pi)$')  
+    plt.savefig(f'{inp.output_dir}/standard_ilc.png')                                                                                                    
+    
+
+    return
+
+if __name__ == '__main__':
+    main()

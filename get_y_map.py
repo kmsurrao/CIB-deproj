@@ -3,7 +3,7 @@ import yaml
 import healpy as hp
 
 
-def setup_pyilc(inp, env, beta, suppress_printing=False, inflated=False):
+def setup_pyilc(inp, env, beta, suppress_printing=False, inflated=False, standard_ilc=False):
     '''
     Sets up yaml files for pyilc and runs the code
 
@@ -14,6 +14,7 @@ def setup_pyilc(inp, env, beta, suppress_printing=False, inflated=False):
     beta: float, beta value to use for CIB deprojection
     suppress_printing: Bool, whether to suppress outputs and errors from pyilc code itself
     inflated: Bool, whether or not to use inflated CIB frequency maps
+    standard_ilc: Bool, whether to use a standard ILC without CIB deprojection
 
     RETURNS
     -------
@@ -23,17 +24,26 @@ def setup_pyilc(inp, env, beta, suppress_printing=False, inflated=False):
     #set up yaml files for pyilc
     
     pyilc_input_params = {}
-    if inflated:
-        pyilc_input_params['output_dir'] = str(inp.output_dir) + f"/pyilc_outputs/beta_{beta:.2f}_inflated/"
+    if not standard_ilc:
+        if inflated:
+            pyilc_input_params['output_dir'] = str(inp.output_dir) + f"/pyilc_outputs/beta_{beta:.2f}_inflated/"
+        else:
+            pyilc_input_params['output_dir'] = str(inp.output_dir) + f"/pyilc_outputs/beta_{beta:.2f}_uninflated/"
     else:
-        pyilc_input_params['output_dir'] = str(inp.output_dir) + f"/pyilc_outputs/beta_{beta:.2f}_uninflated/"
+        if inflated:
+            pyilc_input_params['output_dir'] = str(inp.output_dir) + f"/pyilc_outputs/inflated/"
+        else:
+            pyilc_input_params['output_dir'] = str(inp.output_dir) + f"/pyilc_outputs/uninflated/"
+
     pyilc_input_params['output_prefix'] = ""
     pyilc_input_params['save_weights'] = "no"
-    pyilc_input_params['param_dict_file'] = f'{inp.output_dir}/pyilc_yaml_files/beta_{beta:.2f}.yaml'
+    if not standard_ilc:
+        pyilc_input_params['param_dict_file'] = f'{inp.output_dir}/pyilc_yaml_files/beta_{beta:.2f}.yaml'
     
     pyilc_input_params['ELLMAX'] = inp.ellmax
     pyilc_input_params['wavelet_type'] = 'TopHatHarmonic' 
     pyilc_input_params['BinSize'] = inp.ells_per_bin
+    pyilc_input_params['taper_width'] = 0
     
     pyilc_input_params['N_freqs'] = len(inp.frequencies)
     pyilc_input_params['bandpass_type'] = 'ActualBandpasses' 
@@ -50,13 +60,15 @@ def setup_pyilc(inp, env, beta, suppress_printing=False, inflated=False):
             [f'{inp.output_dir}/maps/uninflated_{freq}.fits' for freq in inp.frequencies]
 
     pyilc_input_params['beam_type'] = 'Gaussians'
-    pyilc_input_params['beam_FWHM_arcmin'] = [1.4]*len(inp.frequencies)
-    pyilc_input_params['perform_ILC_at_beam'] = 1.4 # the FWHM of the common beam to convolve to before performing ILC (in arcmin)
+    pyilc_input_params['beam_FWHM_arcmin'] = [0.1]*len(inp.frequencies)
 
     pyilc_input_params['N_side'] = inp.nside
     pyilc_input_params['ILC_preserved_comp'] = 'tSZ'
-    pyilc_input_params['N_deproj'] = 1
-    pyilc_input_params['ILC_deproj_comps'] = ['CIB']
+    if not standard_ilc:
+        pyilc_input_params['N_deproj'] = 1
+        pyilc_input_params['ILC_deproj_comps'] = ['CIB']
+    else:
+        pyilc_input_params['N_deproj'] = 0
     pyilc_input_params['N_maps_xcorr'] = 0
 
     if inflated:
