@@ -53,7 +53,6 @@ class Info(object):
         self.cib_inflation = p['cib_inflation']
         assert self.cib_inflation > 1, "cib_inflation must be greater than 1"
         self.harmonic_space = p['harmonic_space']
-
         
         self.cib_map_dir = p['cib_map_dir']
         assert type(self.cib_map_dir) is str, "TypeError: cib_map_dir must be str"

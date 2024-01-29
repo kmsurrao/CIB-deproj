@@ -71,10 +71,14 @@ def setup_pyilc(inp, env, beta, suppress_printing=False, inflated=False, standar
         pyilc_input_params['N_deproj'] = 0
     pyilc_input_params['N_maps_xcorr'] = 0
 
-    if inflated:
-        ymap_yaml = f'{inp.output_dir}/pyilc_yaml_files/beta{beta:.2f}_inflated.yml'
+    if standard_ilc:
+        beta_str = ''
     else:
-        ymap_yaml = f'{inp.output_dir}/pyilc_yaml_files/beta{beta:.2f}_uninflated.yml'
+        beta_str = f'beta{beta:.2f}_'
+    if inflated:
+        ymap_yaml = f'{inp.output_dir}/pyilc_yaml_files/{beta_str}inflated.yml'
+    else:
+        ymap_yaml = f'{inp.output_dir}/pyilc_yaml_files/{beta_str}uninflated.yml'
     with open(ymap_yaml, 'w') as outfile:
         yaml.dump(pyilc_input_params, outfile, default_flow_style=None)
 
@@ -86,7 +90,9 @@ def setup_pyilc(inp, env, beta, suppress_printing=False, inflated=False, standar
     if inp.debug:
         print(f'generated ILC maps for beta={beta:.2f}, inflated={inflated}', flush=True)
     inflated_str = 'inflated' if inflated else 'uninflated'
-    ymap = hp.read_map(f"{inp.output_dir}/pyilc_outputs/beta_{beta:.2f}_{inflated_str}/needletILCmap_component_tSZ_deproject_CIB.fits")
+    beta_str = f'beta_{beta:.2f}_' if not standard_ilc else ''
+    deproj_str = '_deproject_CIB' if not standard_ilc else ''
+    ymap = hp.read_map(f"{inp.output_dir}/pyilc_outputs/{beta_str}{inflated_str}/needletILCmap_component_tSZ{deproj_str}.fits")
     
     
     return ymap

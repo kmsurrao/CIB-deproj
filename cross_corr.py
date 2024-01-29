@@ -2,6 +2,7 @@ import numpy as np
 import healpy as hp
 import treecorr
 import os
+from scipy import stats
 from get_y_map import setup_pyilc
 
 def randsphere(num, ra_range=[0,360], dec_range=[-90,90]):
@@ -147,20 +148,40 @@ def cov(inp, Cl):
     ARGUMENTS
     ---------
     inp: Info object containing input parameter specifications
-    Cl: 3D numpy array of shape (2, 2, ellmax+1) containing power spectra
+    Cl: 3D numpy array of shape (2, 2, Nbins) containing binned power spectra
         Cl[0,0] = Cl^{hh}
         Cl[0,1] = Cl[1,0] = Cl^{hy}
         Cl[1,1] = Cl^{yy}
 
     RETURNS
     -------
-    covar: 2D numpy array of shape (ellmax+1, ellmax+1)
+    covar: 2D numpy array of shape (Nbins, Nbins)
         containing Gaussian covariance matrix
     '''
-    ells = np.arange(inp.ellmax+1)
-    Nmodes = 1/(2*ells+1)
+    Nmodes = 1/((2*inp.mean_ells+1)*inp.ells_per_bin)
     covar = np.diag(Nmodes*(Cl[0,1]**2 + Cl[0,0]*Cl[1,1]))
     return covar
+
+
+def binned(inp, spectrum):
+    '''
+    ARGUMENTS
+    ---------
+    inp: Info object containing input parameter specifications
+    spectrum: 1D numpy array of length ellmax+1 containing some power spectrum
+
+    RETURNS
+    -------
+    binned_spectrum: 1D numpy array of length Nbins containing binned power spectrum
+    '''
+    ells = np.arange(inp.ellmax+1)
+    Dl = ells*(ells+1)/2/np.pi*spectrum
+    Nbins = inp.ellmax//inp.ells_per_bin
+    res = stats.binned_statistic(ells[2:], Dl[2:], statistic='mean', bins=Nbins)
+    mean_ells = (res[1][:-1]+res[1][1:])/2
+    inp.mean_ells = mean_ells
+    binned_spectrum = res[0]/(mean_ells*(mean_ells+1)/2/np.pi)
+    return binned_spectrum
 
 
 def compute_chi2_harmonic_space(inp, y1, y2, h):
@@ -177,11 +198,11 @@ def compute_chi2_harmonic_space(inp, y1, y2, h):
     -------
     chi2: float, chi^2 value of <h,y1> and <h,y2>
     '''
-    hy1 = hp.anafast(h, y1, lmax=inp.ellmax)
-    hy2 = hp.anafast(h, y2, lmax=inp.ellmax)
-    hh = hp.anafast(h, lmax=inp.ellmax)
-    y1y1 = hp.anafast(y1, lmax=inp.ellmax)
-    y2y2 = hp.anafast(y2, lmax=inp.ellmax)
+    hy1 = binned(inp, hp.anafast(h, y1, lmax=inp.ellmax))
+    hy2 = binned(inp, hp.anafast(h, y2, lmax=inp.ellmax))
+    hh = binned(inp, hp.anafast(h, lmax=inp.ellmax))
+    y1y1 = binned(inp, hp.anafast(y1, lmax=inp.ellmax))
+    y2y2 = binned(inp, hp.anafast(y2, lmax=inp.ellmax))
     cov_hy1 = cov(inp, np.array([[hh, hy1], [hy1, y1y1]]))
     cov_hy2 = cov(inp, np.array([[hh, hy2], [hy2, y2y2]]))
     cov_tot = cov_hy1 + cov_hy2

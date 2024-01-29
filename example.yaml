@@ -4,7 +4,8 @@ nside: 1024
 # maximum ell for which to compute chi^2
 ellmax: 3000
 
-# number of multipoles per bin to use in harmonic ILC calculation
+# number of multipoles per bin to use in harmonic ILC calculation 
+# This is also used for chi^2 estimation if harmonic_space is True
 ells_per_bin: 20
 
 # list of integer frequencies (GHz) to use in harmonic ILC calculation
@@ -27,7 +28,7 @@ cib_inflation: 10.0
 
 # whether to compute Gaussian covariance in harmonic space or 
 # use real space correlations with treecorr
-harmonic_space: False
+harmonic_space: True
 
 # directory containing agora CIB maps at each frequency in frequencies
 # on NERSC: /global/cfs/cdirs/act/data/agora_sims/cib/planck/len/uk

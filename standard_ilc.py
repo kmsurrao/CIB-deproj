@@ -46,7 +46,19 @@ def main():
     plt.grid(which='both')
     plt.xlabel(r'$\ell$')
     plt.ylabel(r'$\ell(\ell+1)C_\ell/(2\pi)$')  
-    plt.savefig(f'{inp.output_dir}/standard_ilc.png')                                                                                                    
+    plt.savefig(f'{inp.output_dir}/standard_ilc_auto_spectra.png')  
+
+    # compute and plot correlation coefficients
+    yuninfl_x_ytrue = hp.anafast(y_uninflated_cib, y_true, lmax=inp.ellmax)/np.sqrt(y_uninfl_auto*y_true_auto)   
+    yinfl_x_ytrue = hp.anafast(y_inflated_cib, y_true, lmax=inp.ellmax)/np.sqrt(y_infl_auto*y_true_auto)   
+    plt.clf()
+    plt.plot(ells[start:], yuninfl_x_ytrue[start:], label='y recon. x y true')   
+    plt.plot(ells[start:], yinfl_x_ytrue[start:], label='y recon. (inflated CIB) x y true')
+    plt.legend()
+    plt.grid()    
+    plt.xlabel(r'$\ell$')
+    plt.ylabel(r'$r_{\ell}$')  
+    plt.savefig(f'{inp.output_dir}/standard_ilc_corr_coeff.png')                                                                                         
     
 
     return
