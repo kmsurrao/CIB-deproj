@@ -47,6 +47,8 @@ def setup_output_dir(inp, env, standard_ilc=False):
         subprocess.call(f'mkdir {inp.output_dir}/maps', shell=True, env=env)
     if not os.path.isdir(f'{inp.output_dir}/results_test'):
         subprocess.call(f'mkdir {inp.output_dir}/results_test', shell=True, env=env)
+    if not os.path.isdir(f'{inp.output_dir}/correlation_plots'):
+        subprocess.call(f'mkdir {inp.output_dir}/correlation_plots', shell=True, env=env)
     if not os.path.isdir(f'{inp.output_dir}/pyilc_yaml_files'):
         subprocess.call(f'mkdir {inp.output_dir}/pyilc_yaml_files', shell=True, env=env)
     if not os.path.isdir(f'{inp.output_dir}/pyilc_outputs'):
@@ -86,6 +88,27 @@ def tsz_spectral_response(freqs):
     return np.array(response)
 
 
+def binned(inp, spectrum):
+    '''
+    ARGUMENTS
+    ---------
+    inp: Info object containing input parameter specifications
+    spectrum: 1D numpy array of length ellmax+1 containing some power spectrum
+
+    RETURNS
+    -------
+    binned_spectrum: 1D numpy array of length Nbins containing binned power spectrum
+    '''
+    ells = np.arange(inp.ellmax+1)
+    Dl = ells*(ells+1)/2/np.pi*spectrum
+    Nbins = inp.ellmax//inp.ells_per_bin
+    res = stats.binned_statistic(ells[2:], Dl[2:], statistic='mean', bins=Nbins)
+    mean_ells = (res[1][:-1]+res[1][1:])/2
+    inp.mean_ells = mean_ells
+    binned_spectrum = res[0]/(mean_ells*(mean_ells+1)/2/np.pi)
+    return binned_spectrum
+
+
 def get_freq_maps(inp):
     '''
     ARGUMENTS
@@ -104,7 +127,7 @@ def get_freq_maps(inp):
     cib_map_150 = hp.ud_grade(hp.read_map(f'{inp.cib_map_dir}/agora_act_150ghz_lcibNG_uk.fits'), inp.nside)
     for i, freq in enumerate(inp.frequencies):
         idx = planck_freqs.index(freq)
-        PS_noise = PS_noise_Planck[idx]
+        PS_noise = inp.planck_noise_fraction*PS_noise_Planck[idx]
         noise_map = hp.synfast(PS_noise, nside=inp.nside) #units of uK
         tsz_map = tsz_response_vec[i]*ymap
         cib_map = hp.read_map(f'{inp.cib_map_dir}/mdpl2_len_mag_cibmap_planck_{freq}_uk.fits')
@@ -118,3 +141,4 @@ def get_freq_maps(inp):
             print(f'saved {inp.output_dir}/maps/uninflated_{freq}.fits', flush=True)
             print(f'saved {inp.output_dir}/maps/inflated_{freq}.fits', flush=True)
     return
+

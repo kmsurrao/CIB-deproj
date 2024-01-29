@@ -52,6 +52,8 @@ class Info(object):
             self.num_parallel = 1
         self.cib_inflation = p['cib_inflation']
         assert self.cib_inflation > 1, "cib_inflation must be greater than 1"
+        self.planck_noise_fraction = p['planck_noise_fraction']
+        assert 0 < self.planck_noise_fraction, "planck_noise_fraction must be greater than 0"
         self.harmonic_space = p['harmonic_space']
         
         self.cib_map_dir = p['cib_map_dir']

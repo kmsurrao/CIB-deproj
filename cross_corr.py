@@ -4,6 +4,8 @@ import treecorr
 import os
 from scipy import stats
 from get_y_map import setup_pyilc
+from utils import binned
+from plot_correlations import plot_corr
 
 def randsphere(num, ra_range=[0,360], dec_range=[-90,90]):
     '''
@@ -163,27 +165,6 @@ def cov(inp, Cl):
     return covar
 
 
-def binned(inp, spectrum):
-    '''
-    ARGUMENTS
-    ---------
-    inp: Info object containing input parameter specifications
-    spectrum: 1D numpy array of length ellmax+1 containing some power spectrum
-
-    RETURNS
-    -------
-    binned_spectrum: 1D numpy array of length Nbins containing binned power spectrum
-    '''
-    ells = np.arange(inp.ellmax+1)
-    Dl = ells*(ells+1)/2/np.pi*spectrum
-    Nbins = inp.ellmax//inp.ells_per_bin
-    res = stats.binned_statistic(ells[2:], Dl[2:], statistic='mean', bins=Nbins)
-    mean_ells = (res[1][:-1]+res[1][1:])/2
-    inp.mean_ells = mean_ells
-    binned_spectrum = res[0]/(mean_ells*(mean_ells+1)/2/np.pi)
-    return binned_spectrum
-
-
 def compute_chi2_harmonic_space(inp, y1, y2, h):
     '''
     ARGUMENTS
@@ -244,6 +225,7 @@ def compare_chi2(inp, env, beta, ra_halos, dec_halos, h):
     if inp.debug:
         print(f'chi2_true for beta={beta}: {chi2_true}', flush=True)
         print(f'chi2_inflated for beta={beta}: {chi2_inflated}', flush=True)
+    plot_corr(inp, beta, y_true, y_recon, y_recon_inflated, h)
     return chi2_true, chi2_inflated
 
 

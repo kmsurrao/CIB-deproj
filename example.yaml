@@ -10,21 +10,24 @@ ells_per_bin: 20
 
 # list of integer frequencies (GHz) to use in harmonic ILC calculation
 # These must be a subset of the Planck frequencies, listed in increasing order
-frequencies: [100, 143, 217, 353]
+frequencies: [100, 143, 217]
 
 # range of values (inclusive) to test for beta
-beta_range: [1.1, 1.7]
+beta_range: [0.7, 2.1]
 
 # number of beta values to test
-num_beta_vals: 10
+num_beta_vals: 30
 
 # number of beta values to test in parallel
 # if this input is not provided, no parallelization is assumed (num_parallel=1)
-num_parallel: 5
+num_parallel: 16
 
 # factor by which to inflate CIB and deproject for comparison to uninflated 
 # CIB that's deprojected
 cib_inflation: 10.0
+
+# fraction of Planck noise power spectrum to use in the production of frequency maps 
+planck_noise_fraction: 0.01
 
 # whether to compute Gaussian covariance in harmonic space or 
 # use real space correlations with treecorr

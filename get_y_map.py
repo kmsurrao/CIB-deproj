@@ -84,7 +84,6 @@ def setup_pyilc(inp, env, beta, suppress_printing=False, inflated=False, standar
 
 
     #run pyilc and return y-map
-
     stdout = subprocess.DEVNULL if suppress_printing else None
     subprocess.run([f"python {inp.pyilc_path}/pyilc/main.py {ymap_yaml}"], shell=True, env=env, stdout=stdout, stderr=stdout)
     if inp.debug:
