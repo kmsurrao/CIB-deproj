@@ -2,9 +2,8 @@ import numpy as np
 import healpy as hp
 import treecorr
 import os
-from scipy import stats
 from get_y_map import setup_pyilc
-from utils import binned
+from utils import binned, cov
 from plot_correlations import plot_corr
 
 def randsphere(num, ra_range=[0,360], dec_range=[-90,90]):
@@ -115,54 +114,6 @@ def compute_chi2_real_space(inp, y1, y2, ra_halos, dec_halos, beta):
     chi2 = np.dot(diff_DV, np.dot(np.linalg.inv(cov_tot), diff_DV))
 
     return chi2
-
-
-def multifrequency_cov(inp, S, N):
-    '''
-    Computes multifrequency Gaussian covariance in harmonic space
-
-    ARGUMENTS
-    ---------
-    inp: Info object containing input parameter specifications
-    S: 3D numpy array of shape (Nfreqs, Nfreqs, ellmax+1) containing power spectrum of signal
-    N: 3D numpy array of shape (Nfreqs, Nfreqs, ellmax+1) containing power spectrum of noise
-        (only nonzero for frequency-frequency auto-spectra)
-
-    RETURNS
-    -------
-    covar: 5D numpy array of shape (Nfreqs, Nfreqs, Nfreqs, Nfreqs, ellmax+1)
-        containing Gaussian covariance matrix
-    '''
-    ells = np.arange(inp.ellmax+1)
-    Nmodes = 1/(2*ells+1)
-    covar = np.einsum('l,ikl,jml->ijkml', Nmodes, S, S) + np.einsum('l,iml,jkl->ijkml', Nmodes, S, S) \
-          + np.einsum('l,ikl,jml->ijkml', Nmodes, S, N) + np.einsum('l,jml,ikl->ijkml', Nmodes, S, N) \
-          + np.einsum('l,iml,jkl->ijkml', Nmodes, S, N) + np.einsum('l,jkl,iml->ijkml', Nmodes, S, N) \
-          + np.einsum('l,ikl,jml->ijkml', Nmodes, N, N) + np.einsum('l,jkl,iml->ijkml', Nmodes, N, N)
-    covar /= Nmodes
-    return covar
-
-
-def cov(inp, Cl):
-    '''
-    Computes Gaussian covariance in harmonic space
-
-    ARGUMENTS
-    ---------
-    inp: Info object containing input parameter specifications
-    Cl: 3D numpy array of shape (2, 2, Nbins) containing binned power spectra
-        Cl[0,0] = Cl^{hh}
-        Cl[0,1] = Cl[1,0] = Cl^{hy}
-        Cl[1,1] = Cl^{yy}
-
-    RETURNS
-    -------
-    covar: 2D numpy array of shape (Nbins, Nbins)
-        containing Gaussian covariance matrix
-    '''
-    Nmodes = 1/((2*inp.mean_ells+1)*inp.ells_per_bin)
-    covar = np.diag(Nmodes*(Cl[0,1]**2 + Cl[0,0]*Cl[1,1]))
-    return covar
 
 
 def compute_chi2_harmonic_space(inp, y1, y2, h):

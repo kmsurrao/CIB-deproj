@@ -3,8 +3,7 @@ import matplotlib.pyplot as plt
 import pickle
 import healpy as hp
 from scipy import stats
-from utils import binned
-from cross_corr import cov
+from utils import binned, cov
 
 def plot_corr(inp, beta, y_true, y_recon, y_recon_inflated, h):
     '''

@@ -6,7 +6,7 @@ ellmax: 3000
 
 # number of multipoles per bin to use in harmonic ILC calculation 
 # This is also used for chi^2 estimation if harmonic_space is True
-ells_per_bin: 20
+ells_per_bin: 100
 
 # list of integer frequencies (GHz) to use in harmonic ILC calculation
 # These must be a subset of the Planck frequencies, listed in increasing order
