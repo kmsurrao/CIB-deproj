@@ -4,7 +4,7 @@ import treecorr
 import os
 from get_y_map import setup_pyilc
 from utils import binned, cov
-from plot_correlations import plot_corr
+from plot_correlations import plot_corr_harmonic, plot_corr_real
 
 def randsphere(num, ra_range=[0,360], dec_range=[-90,90]):
     '''
@@ -42,7 +42,7 @@ def randsphere(num, ra_range=[0,360], dec_range=[-90,90]):
 
 
 
-def compute_chi2_real_space(inp, y1, y2, ra_halos, dec_halos, beta):
+def compute_chi2_real_space(inp, y1, y2, ra_halos, dec_halos, beta, include_covhy2=True):
     '''
     ARGUMENTS
     ---------
@@ -53,10 +53,18 @@ def compute_chi2_real_space(inp, y1, y2, ra_halos, dec_halos, beta):
     ra_halos: ndarray containing ra of halos
     dec_halos: ndarray containing dec of halos
     beta: float, beta value used for CIB deprojection (just used for file naming here)
+    include_covhy2: Bool, whether to include covariance of h x y2 in chi2 computation
 
     RETURNS
     -------
     chi2: float, chi^2 value of <h,y1> and <h,y2>
+    xi_hy1: 1D numpy array of length nrad containing correlation of halos with y1
+    xi_hy2: 1D numpy array of length nrad containing correlation of halos with y2
+    cov_hy1: 3D numpy array of shape (2,2,nrad) containing covariance 
+        matrix of halos and y1
+    cov_hy2: 3D numpy array of shape (2,2,nrad) containing covariance 
+        matrix of halos and y2
+    r_hy: 1D numpy array of length nrad containing x-axis point for plotting
     '''
     rand_ra, rand_dec = randsphere(5*len(ra_halos), ra_range=[0,360], dec_range=[-90,90])
     ra_hp, dec_hp = hp.pix2ang(inp.nside, ipix=np.arange(hp.nside2npix(inp.nside)),lonlat=True)
@@ -108,15 +116,19 @@ def compute_chi2_real_space(inp, y1, y2, ra_halos, dec_halos, beta):
     xi_hy2 = hy2.xi
     cov_hy1 = hy1.cov
     cov_hy2 = hy2.cov
+    r_hy = np.exp(hy1.meanlogr)
 
-    cov_tot = cov_hy1 + cov_hy2
+    if include_covhy2:
+        cov_tot = cov_hy1 + cov_hy2
+    else:
+        cov_tot = cov_hy1
     diff_DV = xi_hy1 - xi_hy2
     chi2 = np.dot(diff_DV, np.dot(np.linalg.inv(cov_tot), diff_DV))
 
-    return chi2
+    return chi2, xi_hy1, xi_hy2, cov_hy1, cov_hy2, r_hy
 
 
-def compute_chi2_harmonic_space(inp, y1, y2, h):
+def compute_chi2_harmonic_space(inp, y1, y2, h, include_covhy2=True):
     '''
     ARGUMENTS
     ---------
@@ -125,10 +137,17 @@ def compute_chi2_harmonic_space(inp, y1, y2, h):
     y2: 1D numpy array in RING format containing true y map
         (or y map with inflated CIB)
     h: 1D numpy array in RING format containing halo map
+    include_covhy2: Bool, whether to include covariance of h x y2 in chi2 computation
 
     RETURNS
     -------
     chi2: float, chi^2 value of <h,y1> and <h,y2>
+    hy1: 1D numpy array of length Nbins containing cross-spectrum of halos with y1
+    hy2: 1D numpy array of length Nbins containing cross-spectrum of halos with y2
+    cov_hy1: 3D numpy array of shape (2,2,Nbins) containing Gaussian power spectrum covariance 
+        matrix of halos and y1
+    cov_hy2: 3D numpy array of shape (2,2,Nbins) containing Gaussian power spectrum covariance 
+        matrix of halos and y2
     '''
     hy1 = binned(inp, hp.anafast(h, y1, lmax=inp.ellmax))
     hy2 = binned(inp, hp.anafast(h, y2, lmax=inp.ellmax))
@@ -137,10 +156,13 @@ def compute_chi2_harmonic_space(inp, y1, y2, h):
     y2y2 = binned(inp, hp.anafast(y2, lmax=inp.ellmax))
     cov_hy1 = cov(inp, np.array([[hh, hy1], [hy1, y1y1]]))
     cov_hy2 = cov(inp, np.array([[hh, hy2], [hy2, y2y2]]))
-    cov_tot = cov_hy1 + cov_hy2
+    if include_covhy2:
+        cov_tot = cov_hy1 + cov_hy2
+    else:
+        cov_tot = cov_hy1
     diff_DV = hy1-hy2
     chi2 = np.dot(diff_DV, np.dot(np.linalg.inv(cov_tot), diff_DV))
-    return chi2
+    return chi2, hy1, hy2, cov_hy1, cov_hy2
 
 
 def compare_chi2(inp, env, beta, ra_halos, dec_halos, h):
@@ -150,10 +172,6 @@ def compare_chi2(inp, env, beta, ra_halos, dec_halos, h):
     inp: Info object containing input parameter specifications
     env: environment object
     beta: float, value of beta for CIB deprojection
-    h: 1D numpy array in RING format containing map of halos
-    y1: 1D numpy array in RING format containing reconstructed y map
-    y2: 1D numpy array in RING format containing true y map
-        (or y map with inflated CIB)
     ra_halos: ndarray containing ra of halos
     dec_halos: ndarray containing dec of halos
     h: 1D numpy array in RING format containing halo map
@@ -168,15 +186,16 @@ def compare_chi2(inp, env, beta, ra_halos, dec_halos, h):
     y_recon = setup_pyilc(inp, env, beta, inflated=False, suppress_printing=(not inp.debug))
     y_recon_inflated = setup_pyilc(inp, env, beta, inflated=True, suppress_printing=(not inp.debug))
     if inp.harmonic_space:
-        chi2_true = compute_chi2_harmonic_space(inp, y_recon, y_true, h)
-        chi2_inflated = compute_chi2_harmonic_space(inp, y_recon, y_recon_inflated, h)
+        chi2_true, uninflxh, tszxh, cov_hyuninfl, cov_hytrue = compute_chi2_harmonic_space(inp, y_recon, y_true, h, include_covhy2=False)
+        chi2_inflated, uninflxh, inflxh, cov_hyuninfl, cov_hyinfl = compute_chi2_harmonic_space(inp, y_recon, y_recon_inflated, h)
+        plot_corr_harmonic(inp, beta, uninflxh, inflxh, tszxh, cov_hyuninfl, cov_hyinfl, cov_hytrue)
     else:   
-        chi2_true = compute_chi2_real_space(inp, y_recon, y_true, ra_halos, dec_halos, beta)
-        chi2_inflated = compute_chi2_real_space(inp, y_recon, y_recon_inflated, ra_halos, dec_halos, beta)
+        chi2_true, uninflxh, tszxh, cov_hyuninfl, cov_hytrue, r_hy = compute_chi2_real_space(inp, y_recon, y_true, ra_halos, dec_halos, beta, include_covhy2=False)
+        chi2_inflated, uninflxh, inflxh, cov_hyuninfl, cov_hyinfl, r_hy = compute_chi2_real_space(inp, y_recon, y_recon_inflated, ra_halos, dec_halos, beta)
+        plot_corr_real(inp, beta, uninflxh, inflxh, tszxh, cov_hyuninfl, cov_hyinfl, cov_hytrue, r_hy)
     if inp.debug:
         print(f'chi2_true for beta={beta}: {chi2_true}', flush=True)
         print(f'chi2_inflated for beta={beta}: {chi2_inflated}', flush=True)
-    plot_corr(inp, beta, y_true, y_recon, y_recon_inflated, h)
     return chi2_true, chi2_inflated
 
 

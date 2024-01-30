@@ -3,6 +3,7 @@ import healpy as hp
 import subprocess
 import os
 import yaml
+from scipy import stats
 from planck_noise import get_planck_noise
 from inpaint_pixels import initial_masking
 
