@@ -144,10 +144,9 @@ def compute_chi2_harmonic_space(inp, y1, y2, h, include_covhy2=True):
     chi2: float, chi^2 value of <h,y1> and <h,y2>
     hy1: 1D numpy array of length Nbins containing cross-spectrum of halos with y1
     hy2: 1D numpy array of length Nbins containing cross-spectrum of halos with y2
-    cov_hy1: 3D numpy array of shape (2,2,Nbins) containing Gaussian power spectrum covariance 
-        matrix of halos and y1
-    cov_hy2: 3D numpy array of shape (2,2,Nbins) containing Gaussian power spectrum covariance 
-        matrix of halos and y2
+    y1y1: 1D numpy array of length Nbins containing auto-spectrum of y1
+    y2y2: 1D numpy array of length Nbins containing auto-spectrum of y2
+    hh: 1D numpy array of length Nbins containing auto-spectrum of halos
     '''
     hy1 = binned(inp, hp.anafast(h, y1, lmax=inp.ellmax))
     hy2 = binned(inp, hp.anafast(h, y2, lmax=inp.ellmax))
@@ -162,7 +161,7 @@ def compute_chi2_harmonic_space(inp, y1, y2, h, include_covhy2=True):
         cov_tot = cov_hy1
     diff_DV = hy1-hy2
     chi2 = np.dot(diff_DV, np.dot(np.linalg.inv(cov_tot), diff_DV))
-    return chi2, hy1, hy2, cov_hy1, cov_hy2
+    return chi2, hy1, hy2, y1y1, y2y2, hh
 
 
 def compare_chi2(inp, env, beta, ra_halos, dec_halos, h):
@@ -186,9 +185,9 @@ def compare_chi2(inp, env, beta, ra_halos, dec_halos, h):
     y_recon = setup_pyilc(inp, env, beta, inflated=False, suppress_printing=(not inp.debug))
     y_recon_inflated = setup_pyilc(inp, env, beta, inflated=True, suppress_printing=(not inp.debug))
     if inp.harmonic_space:
-        chi2_true, uninflxh, tszxh, cov_hyuninfl, cov_hytrue = compute_chi2_harmonic_space(inp, y_recon, y_true, h, include_covhy2=False)
-        chi2_inflated, uninflxh, inflxh, cov_hyuninfl, cov_hyinfl = compute_chi2_harmonic_space(inp, y_recon, y_recon_inflated, h)
-        plot_corr_harmonic(inp, beta, uninflxh, inflxh, tszxh, cov_hyuninfl, cov_hyinfl, cov_hytrue)
+        chi2_true, uninflxh, tszxh, uninfl_auto, tsz_auto, h_auto = compute_chi2_harmonic_space(inp, y_recon, y_true, h, include_covhy2=False)
+        chi2_inflated, uninflxh, inflxh, uninfl_auto, infl_auto, h_auto = compute_chi2_harmonic_space(inp, y_recon, y_recon_inflated, h)
+        plot_corr_harmonic(inp, beta, uninflxh, inflxh, tszxh, uninfl_auto, infl_auto, tsz_auto, h_auto)
     else:   
         chi2_true, uninflxh, tszxh, cov_hyuninfl, cov_hytrue, r_hy = compute_chi2_real_space(inp, y_recon, y_true, ra_halos, dec_halos, beta, include_covhy2=False)
         chi2_inflated, uninflxh, inflxh, cov_hyuninfl, cov_hyinfl, r_hy = compute_chi2_real_space(inp, y_recon, y_recon_inflated, ra_halos, dec_halos, beta)

@@ -6,7 +6,7 @@ from scipy import stats
 from utils import binned, cov
 
 
-def plot_corr_harmonic(inp, beta, uninflxh, inflxh, tszxh, cov_hyuninfl, cov_hyinfl, cov_hytrue):
+def plot_corr_harmonic(inp, beta, uninflxh, inflxh, tszxh, uninfl_auto, infl_auto, tsz_auto, h_auto):
     '''
     Plots harmonic space correlations (power spectra) given the spectra
 
@@ -19,17 +19,23 @@ def plot_corr_harmonic(inp, beta, uninflxh, inflxh, tszxh, cov_hyuninfl, cov_hyi
     inflxh: 1D numpy array of length Nbins containing cross-spectrum of halos with reconstructed y 
         (with CIB inflation)
     tszxh: 1D numpy array of length Nbins containing cross-spectrum of halos with the true y map
-    cov_hyuninfl: 3D numpy array of shape (2,2,Nbins) containing Gaussian power spectrum covariance 
-        matrix of halos and the reconstructed y map (without CIB inflation)
-    cov_hyinfl: 3D numpy array of shape (2,2,Nbins) containing Gaussian power spectrum covariance 
-        matrix of halos and the reconstructed y map (with CIB inflation)
-    cov_hytrue: 3D numpy array of shape (2,2,Nbins) containing Gaussian power spectrum covariance 
-        matrix of halos and the true y map
+    uninfl_auto: 1D numpy array of length Nbins containing auto-spectrum of reconstructed y
+        (without CIB inflation)
+    infl_auto: 1D numpy array of length Nbins containing auto-spectrum of reconstructed y
+        (with CIB inflation)
+    tsz_auto: 1D numpy array of length Nbins containing auto-spectrum of the true y map
+    h_auto: 1D numpy array of length Nbins containing auto-spectrum of halo map
 
     RETURNS
     -------
     None (saves plots in {output_dir}/plot_correlations)
     '''
+    # compute covariances
+    cov_hytrue = cov(inp, np.array([[tsz_auto, tszxh], [tszxh, h_auto]]))
+    cov_hyuninfl = cov(inp, np.array([[uninfl_auto, uninflxh], [uninflxh, h_auto]]))
+    cov_hyinfl = cov(inp, np.array([[infl_auto, inflxh], [inflxh, h_auto]]))
+
+    # plot
     ells = np.arange(inp.ellmax+1)
     Nbins = inp.ellmax//inp.ells_per_bin
     res = stats.binned_statistic(ells[2:], ells[2:], statistic='mean', bins=Nbins)
@@ -47,7 +53,7 @@ def plot_corr_harmonic(inp, beta, uninflxh, inflxh, tszxh, cov_hyuninfl, cov_hyi
     plt.savefig(f'{inp.output_dir}/correlation_plots/beta_{beta:0.3f}.png')
 
     # save mean_ells, spectra, and errors to plot later
-    to_save = [mean_ells, to_dl, uninflxh, inflxh, tszxh, cov_hyuninfl, cov_hyinfl, cov_hytrue]
+    to_save = [mean_ells, to_dl, uninflxh, inflxh, tszxh, uninfl_auto, infl_auto, tsz_auto, h_auto]
     pickle.dump(to_save, open(f'{inp.output_dir}/correlation_plots/beta_{beta:0.3f}.p', 'wb'))
 
     return
@@ -123,13 +129,12 @@ def plot_corr_harmonic_from_map(inp, beta, y_true, y_recon, y_recon_inflated, h)
     uninflxh = binned(inp, hp.anafast(y_recon, h, lmax=inp.ellmax))
     inflxh = binned(inp, hp.anafast(y_recon_inflated, h, lmax=inp.ellmax))
     tszxh = binned(inp, hp.anafast(y_true, h, lmax=inp.ellmax))
-
-    # compute covariances
-    cov_hytrue = cov(inp, np.array([[tsz_auto, tszxh], [tszxh, h_auto]]))
-    cov_hyuninfl = cov(inp, np.array([[uninfl_auto, uninflxh], [uninflxh, h_auto]]))
-    cov_hyinfl = cov(inp, np.array([[infl_auto, inflxh], [inflxh, h_auto]]))
-
+    uninfl_auto = binned(inp, hp.anafast(y_recon, lmax=inp.ellmax))
+    infl_auto = binned(inp, hp.anafast(y_recon_inflated, lmax=inp.ellmax))
+    tsz_auto = binned(inp, hp.anafast(y_true, lmax=inp.ellmax))
+    h_auto = binned(inp, hp.anafast(h, lmax=inp.ellmax))
+    
     # plot and save
-    plot_corr_harmonic(inp, beta, uninflxh, inflxh, tszxh, cov_hyuninfl, cov_hyinfl, cov_hytrue)
+    plot_corr_harmonic(inp, beta, uninflxh, inflxh, tszxh, uninfl_auto, infl_auto, tsz_auto, h_auto)
     
     return
