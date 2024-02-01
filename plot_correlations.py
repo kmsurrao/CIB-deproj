@@ -93,6 +93,7 @@ def plot_corr_real(inp, beta, uninflxh, inflxh, tszxh, cov_hyuninfl, cov_hyinfl,
     plt.legend()
     plt.xscale('log')
     plt.yscale('log')
+    plt.savefig(f'{inp.output_dir}/correlation_plots/beta_{beta:0.3f}.png')
 
     # save mean_ells, spectra, and errors to plot later
     to_save = [uninflxh, inflxh, tszxh, cov_hyuninfl, cov_hyinfl, cov_hytrue]
