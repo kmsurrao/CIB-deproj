@@ -22,9 +22,8 @@ num_beta_vals: 30
 # if this input is not provided, no parallelization is assumed (num_parallel=1)
 num_parallel: 16
 
-# factor by which to inflate CIB and deproject for comparison to uninflated 
-# CIB that's deprojected
-cib_inflation: 10.0
+# factors by which to inflate CIB and deproject for comparison
+cib_inflation: [5.0, 15.0]
 
 # fraction of Planck noise power spectrum to use in the production of frequency maps 
 planck_noise_fraction: 0.01

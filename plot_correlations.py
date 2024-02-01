@@ -40,7 +40,7 @@ def plot_corr_harmonic(inp, beta, hy_true, hy_infl, yy_true, yy_infl, hh):
     to_dl = mean_ells*(mean_ells+1)/2/np.pi
     plt.clf()
     plt.errorbar(mean_ells, to_dl*hy_true, label=r'$C_\ell^{h, (\mathrm{yrecon.-ytrue})}$', yerr=to_dl*np.sqrt(np.diagonal(cov_hytrue)), linestyle='solid')
-    plt.errorbar(mean_ells, to_dl*hy_infl, label=r'$C_\ell^{h, (\mathrm{yrecon.-yrecon_infl_cib})}$', yerr=to_dl*np.sqrt(np.diagonal(cov_hyinfl)), linestyle='dashed')
+    plt.errorbar(mean_ells, to_dl*hy_infl, label=r'$C_\ell^{h, (\mathrm{yrecon.-yreconinflcib})}$', yerr=to_dl*np.sqrt(np.diagonal(cov_hyinfl)), linestyle='dashed')
     plt.grid()
     plt.ylabel(r'$\ell(\ell+1)C_\ell /(2\pi)$ [$\mu \mathrm{K}^2$]')
     plt.xlabel(r'$\ell$')

@@ -182,8 +182,8 @@ def get_freq_maps(inp):
         cib_map = hp.read_map(f'{inp.cib_map_dir}/mdpl2_len_mag_cibmap_planck_{freq}_uk.fits')
         cib_map = hp.ud_grade(cib_map, inp.nside) #units of uK
         cib_map = initial_masking(inp, cib_map, cib_map_150)
-        freq_map_uninflated = tsz_map + cib_map + noise_map
-        freq_map_inflated = tsz_map + inp.cib_inflation*cib_map + noise_map
+        freq_map_uninflated = tsz_map + inp.cib_inflation[0]*cib_map + noise_map
+        freq_map_inflated = tsz_map + inp.cib_inflation[1]*cib_map + noise_map
         hp.write_map(f'{inp.output_dir}/maps/uninflated_{freq}.fits', freq_map_uninflated, overwrite=True, dtype=np.float32)
         hp.write_map(f'{inp.output_dir}/maps/inflated_{freq}.fits', freq_map_inflated, overwrite=True, dtype=np.float32)
         if inp.debug:

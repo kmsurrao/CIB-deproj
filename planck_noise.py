@@ -52,7 +52,7 @@ def get_planck_noise(inp):
     MAX_NOISE = 1.e9
     delta_ell = 1
     ell = np.arange(0, inp.ellmax+1, delta_ell)
-    PS_noise_Planck = np.zeros((Nfreqs_Planck, np.int(inp.ellmax)+1))
+    PS_noise_Planck = np.zeros((Nfreqs_Planck, int(inp.ellmax)+1))
     for i in range(Nfreqs_Planck):
         PS_noise_Planck[i] = (noise_arr_Planck[i] * (1.0/60.0) * (np.pi/180.0))**2.0 * np.exp( ell*(ell+1)* sigma_arr_Planck[i]**2. ) #square to get the white-noise level -- see e.g. Eq. 2.32 (pg 15) of https://arxiv.org/pdf/1509.06770v4.pdf
         # handle overflow due to high noise at high ell
