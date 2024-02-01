@@ -13,7 +13,7 @@ ells_per_bin: 100
 frequencies: [100, 143, 217]
 
 # range of values (inclusive) to test for beta
-beta_range: [0.7, 2.1]
+beta_range: [1.0, 2.0]
 
 # number of beta values to test
 num_beta_vals: 30
