@@ -127,7 +127,7 @@ def compute_chi2_harmonic_space(inp, y1, y2, h):
     yy: 1D numpy array of length Nbins containing auto-spectrum of (y1-y2)
     hh: 1D numpy array of length Nbins containing auto-spectrum of halos
     '''
-    hy = binned(inp, hp.anafast(h, y1-y2))
+    hy = binned(inp, hp.anafast(h, y1-y2, lmax=inp.ellmax))
     hh = binned(inp, hp.anafast(h, lmax=inp.ellmax))
     yy = binned(inp, hp.anafast(y1-y2, lmax=inp.ellmax))
     cov_hy = cov(inp, np.array([[hh, hy], [hy, yy]]))

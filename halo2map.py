@@ -2,7 +2,7 @@ import healpy as hp
 from tqdm import tqdm
 import numpy as np
 import pickle
-# import h5py
+import h5py
 
 def halodir2map(inp, save_single_catalog=True):
     '''
@@ -93,21 +93,21 @@ def halofile2map(inp):
     -------
     density: 1D numpy array in RING ordering containing halo density map
     '''
-    # df = h5py.File(inp.halo_catalog, 'r')
-    # ra = df.get('ra')[()]
-    # dec = df.get('dec')[()]
-    # z_all = df.get('z')[()]
-    # mvir = df.get('M')[()]
-    # halo_ra_all = np.array(ra)
-    # halo_dec_all= np.array(dec)
-    # halo_z_all= np.array(z_all)
-    # halo_m_all= np.array(mvir) 
+    df = h5py.File(inp.halo_catalog, 'r')
+    ra = df.get('ra')[()]
+    dec = df.get('dec')[()]
+    z_all = df.get('z')[()]
+    mvir = df.get('M')[()]
+    halo_ra_all = np.array(ra)
+    halo_dec_all= np.array(dec)
+    halo_z_all= np.array(z_all)
+    halo_m_all= np.array(mvir) 
 
-    # comment out section above and use section below if h5py not working
-    halo_ra_all = pickle.load(open(f'{inp.output_dir}/halo_ra_all.p', 'rb'))  
-    halo_dec_all = pickle.load(open(f'{inp.output_dir}/halo_dec_all.p', 'rb'))    
-    halo_z_all = pickle.load(open(f'{inp.output_dir}/halo_z_all.p', 'rb')) 
-    halo_m_all = pickle.load(open(f'{inp.output_dir}/halo_m_all.p', 'rb'))      
+    # # comment out section above and use section below if h5py not working
+    # halo_ra_all = pickle.load(open(f'{inp.output_dir}/halo_ra_all.p', 'rb'))  
+    # halo_dec_all = pickle.load(open(f'{inp.output_dir}/halo_dec_all.p', 'rb'))    
+    # halo_z_all = pickle.load(open(f'{inp.output_dir}/halo_z_all.p', 'rb')) 
+    # halo_m_all = pickle.load(open(f'{inp.output_dir}/halo_m_all.p', 'rb'))      
 
     #you can change the selection to have more or less halos to boost the SNR of correlations.
     indsel_z = np.where((halo_z_all > 0.0) & (halo_z_all < 0.25))[0]
