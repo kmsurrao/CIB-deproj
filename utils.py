@@ -173,7 +173,7 @@ def get_freq_maps(inp):
     tsz_response_vec = tsz_spectral_response(inp.frequencies)
     ymap = hp.read_map(inp.tsz_map_file)
     ymap = hp.ud_grade(ymap, inp.nside) #units of uK
-    cib_map_150 = hp.ud_grade(hp.read_map(f'{inp.cib_map_dir}/agora_act_150ghz_lcibNG_uk.fits'), inp.nside)
+    cib_map_143 = hp.ud_grade(hp.read_map(f'{inp.cib_map_dir}/mdpl2_len_mag_cibmap_planck_143_uk.fits'), inp.nside)
     for i, freq in enumerate(inp.frequencies):
         idx = planck_freqs.index(freq)
         PS_noise = inp.planck_noise_fraction*PS_noise_Planck[idx]
@@ -181,7 +181,7 @@ def get_freq_maps(inp):
         tsz_map = tsz_response_vec[i]*ymap
         cib_map = hp.read_map(f'{inp.cib_map_dir}/mdpl2_len_mag_cibmap_planck_{freq}_uk.fits')
         cib_map = hp.ud_grade(cib_map, inp.nside) #units of uK
-        cib_map = initial_masking(inp, cib_map, cib_map_150)
+        cib_map = initial_masking(inp, cib_map, cib_map_143)
         freq_map_uninflated = tsz_map + inp.cib_inflation[0]*cib_map + noise_map
         freq_map_inflated = tsz_map + inp.cib_inflation[1]*cib_map + noise_map
         hp.write_map(f'{inp.output_dir}/maps/uninflated_{freq}.fits', freq_map_uninflated, overwrite=True, dtype=np.float32)

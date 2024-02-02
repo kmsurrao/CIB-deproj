@@ -53,7 +53,7 @@ halo_files_dir: '/scratch/09334/ksurrao/halo_files'
 halo_catalog: '/scratch/09334/ksurrao/halo_files/haloslc_agora_zsel_0_to_0.3_Msel_1e13_to_1e15.h5'
 
 # path to pyilc repository
-pyilc_path: '/work2/09334/ksurrao/stampede2/GitHub/pyilc'
+pyilc_path: '/work2/09334/ksurrao/stampede3/GitHub/pyilc'
 
 # directory in which to save outputs
 output_dir: '/scratch/09334/ksurrao/cib_beta'

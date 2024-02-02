@@ -160,7 +160,7 @@ def compare_chi2(inp, env, beta, ra_halos, dec_halos, h):
         chi2_inflated, hy_infl, yy_infl, hh = compute_chi2_harmonic_space(inp, y_recon, y_recon_inflated, h)
         plot_corr_harmonic(inp, beta, hy_true, hy_infl, yy_true, yy_infl, hh)
     else:   
-        chi2_true, hy_true, cov_hytrue, r_hy = compute_chi2_real_space(inp, y_recon, y_true, ra_halos, dec_halos, beta, include_covhy2=False)
+        chi2_true, hy_true, cov_hytrue, r_hy = compute_chi2_real_space(inp, y_recon, y_true, ra_halos, dec_halos, beta)
         chi2_inflated, hy_infl, cov_hyinfl, r_hy = compute_chi2_real_space(inp, y_recon, y_recon_inflated, ra_halos, dec_halos, beta)
         plot_corr_real(inp, beta, hy_true, hy_infl, cov_hytrue, cov_hyinfl, r_hy)
     if inp.debug:
