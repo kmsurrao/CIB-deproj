@@ -77,9 +77,10 @@ def tsz_spectral_response(freqs):
 
     RETURNS
     ---------
-    1D array containing tSZ spectral response to each frequency
+    1D array containing tSZ spectral response to each frequency (units of K_CMB)
     '''
     T_cmb = 2.726
+    T_cmb_uK = 2.726e6
     h = 6.62607004*10**(-34)
     kb = 1.38064852*10**(-23)
     response = []
@@ -172,15 +173,15 @@ def get_freq_maps(inp):
     planck_freqs = [30, 44, 70, 100, 143, 217, 353, 545]
     tsz_response_vec = tsz_spectral_response(inp.frequencies)
     ymap = hp.read_map(inp.tsz_map_file)
-    ymap = hp.ud_grade(ymap, inp.nside) #units of uK
-    cib_map_143 = hp.ud_grade(hp.read_map(f'{inp.cib_map_dir}/mdpl2_len_mag_cibmap_planck_143_uk.fits'), inp.nside)
+    ymap = hp.ud_grade(ymap, inp.nside) #unitless
+    cib_map_143 = 10**(-6)*hp.ud_grade(hp.read_map(f'{inp.cib_map_dir}/mdpl2_len_mag_cibmap_planck_143_uk.fits'), inp.nside) #units of K
     for i, freq in enumerate(inp.frequencies):
         idx = planck_freqs.index(freq)
         PS_noise = inp.planck_noise_fraction*PS_noise_Planck[idx]
-        noise_map = hp.synfast(PS_noise, nside=inp.nside) #units of uK
-        tsz_map = tsz_response_vec[i]*ymap
+        noise_map = 10**(-6)*hp.synfast(PS_noise, nside=inp.nside) #units of K
+        tsz_map = tsz_response_vec[i]*ymap #units of K
         cib_map = hp.read_map(f'{inp.cib_map_dir}/mdpl2_len_mag_cibmap_planck_{freq}_uk.fits')
-        cib_map = hp.ud_grade(cib_map, inp.nside) #units of uK
+        cib_map = 10**(-6)*hp.ud_grade(cib_map, inp.nside) #units of K
         cib_map = initial_masking(inp, cib_map, cib_map_143)
         freq_map_uninflated = tsz_map + inp.cib_inflation[0]*cib_map + noise_map
         freq_map_inflated = tsz_map + inp.cib_inflation[1]*cib_map + noise_map

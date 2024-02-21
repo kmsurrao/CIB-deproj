@@ -37,7 +37,7 @@ def initial_masking(inp, map_, map_150):
     ---------
     inp: Info object containing input parameter specifications
     map_: numpy array of map to inpaint in healpix format
-    map_150: numpy array of 150 GHz CIB healpix map. 
+    map_150: numpy array of 150 GHz CIB healpix map (in units of K). 
         This is the map from which to create the flux cut mask.
     
     RETURNS
@@ -47,7 +47,7 @@ def initial_masking(inp, map_, map_150):
         Very bright values in the input map are inpainted
     '''
     mask = np.ones_like(map_)
-    cut_val = JytoK(150, inp.nside)*0.1*10**6
+    cut_val = JytoK(150, inp.nside)*0.1
     mask[map_150 >= cut_val] = 0 #mask pixels >= 100 mJy at 150 GHz
     neighbors = hp.pixelfunc.get_all_neighbours(inp.nside, np.where(mask==0)).flatten()
     mask[neighbors] = 0
