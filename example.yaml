@@ -4,14 +4,23 @@ nside: 1024
 # maximum ell for which to compute chi^2
 ellmax: 3000
 
-# number of multipoles per bin to use in harmonic ILC calculation 
+# If ILC_type is 'harmonic', this is the number of multipoles per bin 
+# to use in the harmonic ILC calculation 
 # This is also used for chi^2 estimation if harmonic_space is True
 ells_per_bin: 100
 
 # list of integer frequencies (GHz) to use in harmonic ILC calculation
 # These must be a subset of the Planck HFI frequencies (100, 143, 217, 353, 545), 
 # listed in increasing order
-frequencies: [217, 353, 545]
+frequencies: [100, 143]
+
+# ILC type (either 'harmonic' or 'needlet')
+ILC_type: 'needlet'
+
+# If ILC_type is 'needlet', array of FWHM (arcmin) used for constrution 
+# of Gaussians. (needlet filters are differences of two Gaussians). 
+# FWHM need to be in strictly decreasing order.
+GN_FWHM_arcmin: [300., 120., 60.] 
 
 # range of values (inclusive) to test for beta
 beta_range: [1.0, 2.0]
@@ -37,7 +46,7 @@ harmonic_space: True
 # on NERSC: /global/cfs/cdirs/act/data/agora_sims/cib/planck/len/uk
 # CIB maps are assumed to be in units of uK
 # filenames within directory are assumed to be of form mdpl2_len_mag_cibmap_planck_{freq}_uk.fits
-cib_map_dir: '/scratch/09334/ksurrao/agora_planck/cib'
+cib_map_dir: '/scratch/09334/ksurrao/agora_planck/cib/low_res'
 
 # file for agora Compton-y map
 # on NERSC: /global/cfs/cdirs/act/data/agora_sims/tsz/len/mdpl2_ltszNG_bahamas80_rot_sum_4_176_bnd_unb_1.0e+12_1.0e+18_v103021_lmax24000_nside8192_interp1.0_method1_1_lensed_map.fits
@@ -54,7 +63,7 @@ halo_files_dir: '/scratch/09334/ksurrao/halo_files'
 halo_catalog: '/scratch/09334/ksurrao/halo_files/haloslc_agora_zsel_0_to_0.3_Msel_1e13_to_1e15.h5'
 
 # path to pyilc repository
-pyilc_path: '/work2/09334/ksurrao/stampede3/GitHub/pyilc'
+pyilc_path: '/work2/09334/ksurrao/stampede3/Github/pyilc'
 
 # directory in which to save outputs
 output_dir: '/scratch/09334/ksurrao/cib_beta'

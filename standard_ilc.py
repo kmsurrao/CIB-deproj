@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from input import Info
 from get_y_map import setup_pyilc
+from halo2map import halodir2map, halofile2map
 from utils import *
 
 def main():
@@ -27,8 +28,8 @@ def main():
 
     # run pyilc
     print('Running pyilc...', flush=True)  
-    y_uninflated_cib = setup_pyilc(inp, env, 1.0, suppress_printing=False, inflated=False, standard_ilc=True)
-    y_inflated_cib = setup_pyilc(inp, env, 1.0, suppress_printing=False, inflated=True, standard_ilc=True) 
+    y_uninflated_cib = setup_pyilc(inp, env, 1.0, suppress_printing=(not inp.debug), inflated=False, standard_ilc=True)
+    y_inflated_cib = setup_pyilc(inp, env, 1.0, suppress_printing=(not inp.debug), inflated=True, standard_ilc=True) 
     y_true = hp.ud_grade(hp.read_map(inp.tsz_map_file), inp.nside)
 
     # get power spectra and plot
@@ -58,9 +59,28 @@ def main():
     plt.grid()    
     plt.xlabel(r'$\ell$')
     plt.ylabel(r'$r_{\ell}$')  
-    plt.savefig(f'{inp.output_dir}/standard_ilc_corr_coeff.png')                                                                                         
-    
+    plt.savefig(f'{inp.output_dir}/standard_ilc_corr_coeff.png') 
 
+    # correlate with halos
+    if inp.halo_catalog is not None:                                                  
+        h, ra_halos, dec_halos = halofile2map(inp)
+    else:
+        h, ra_halos, dec_halos = halodir2map(inp)
+    print('got ra and dec of halos', flush=True)
+    h_auto = hp.anafast(h, lmax=inp.ellmax)
+    yuninfl_x_h = hp.anafast(y_uninflated_cib, h, lmax=inp.ellmax)/np.sqrt(y_uninfl_auto*h_auto)    
+    yinfl_x_h = hp.anafast(y_inflated_cib, h, lmax=inp.ellmax)/np.sqrt(y_infl_auto*h_auto)    
+    ytrue_x_h = hp.anafast(y_true, h, lmax=inp.ellmax)/np.sqrt(y_true_auto*h_auto)
+    plt.clf()
+    plt.plot(ells[start:], yuninfl_x_h[start:], label='y recon. x h')   
+    plt.plot(ells[start:], yinfl_x_h[start:], label='y recon. (inflated CIB) x h')
+    plt.plot(ells[start:], ytrue_x_h[start:], label='y true x h') 
+    plt.legend()
+    plt.grid()    
+    plt.xlabel(r'$\ell$')
+    plt.ylabel(r'$r_{\ell}$')  
+    plt.savefig(f'{inp.output_dir}/standard_ilc_corr_coeff_h.png')                                                                                     
+    
     return
 
 if __name__ == '__main__':

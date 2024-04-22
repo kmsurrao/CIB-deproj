@@ -38,6 +38,10 @@ class Info(object):
         # frequencies assumed to be in strictly increasing order
         if ( any( i >= j for i, j in zip(self.frequencies, self.frequencies[1:]))):
             raise AssertionError
+        self.ILC_type = p['ILC_type']
+        assert self.ILC_type in {'harmonic', 'needlet'}, "ILC_type must be either 'needlet' or 'harmonic'"
+        if self.ILC_type == 'needlet':
+            self.GN_FWHM_arcmin = p['GN_FWHM_arcmin']
         
         self.beta_range = p['beta_range']
         assert len(self.beta_range) == 2, "beta_range must consist of two values corresponding to ends of interval"
@@ -60,7 +64,7 @@ class Info(object):
         assert os.path.isdir(self.cib_map_dir), "cib_map_dir does not exist"
         self.tsz_map_file = p['tsz_map_file']
         assert type(self.tsz_map_file) is str, "TypeError: tsz_map_file must be str"
-        assert os.path.isfile(self.tsz_map_file), "tsz_map_file does not exist"
+        assert os.path.isfile(self.tsz_map_file), f"{self.tsz_map_file} does not exist"
         assert 'halo_catalog' in p or 'halo_files_dir' in p, "Either halo_catalog or halo_files_dir must be defined"
         if 'halo_catalog' in p: #check for halo_catalog before halo_files_dir since using a single halo catalog is faster
             self.halo_catalog = p['halo_catalog']

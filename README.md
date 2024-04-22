@@ -23,3 +23,4 @@ healpy
 pyyaml  
 tqdm  
 treecorr  
+numba  
