@@ -47,6 +47,7 @@ def setup_pyilc(inp, env, beta, suppress_printing=False, inflated=False, standar
     elif inp.ILC_type == 'needlet':
         pyilc_input_params['wavelet_type'] = "GaussianNeedlets"
         pyilc_input_params['GN_FWHM_arcmin'] = [inp.GN_FWHM_arcmin[i] for i in range(len(inp.GN_FWHM_arcmin))]
+        pyilc_input_params['N_scales'] = len(inp.GN_FWHM_arcmin)+1
     pyilc_input_params['taper_width'] = 0
     
     pyilc_input_params['N_freqs'] = len(inp.frequencies)

@@ -2,7 +2,7 @@ import healpy as hp
 from tqdm import tqdm
 import numpy as np
 import pickle
-# import h5py
+import h5py
 
 def halodir2map(inp, save_single_catalog=True):
     '''
