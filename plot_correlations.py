@@ -6,7 +6,7 @@ from scipy import stats
 from utils import binned, cov
 
 
-def plot_corr_harmonic(inp, beta, hy_true, hy_infl, yy_true, yy_infl, hh):
+def plot_corr_harmonic(inp, beta, hy_true, hy_infl, cov_hytrue, cov_hyinfl):
     '''
     Plots harmonic space correlations (power spectra) given the spectra
 
@@ -18,19 +18,15 @@ def plot_corr_harmonic(inp, beta, hy_true, hy_infl, yy_true, yy_infl, hh):
         (y_reconstructed - y_true)
     hy_infl: 1D numpy array of length Nbins containing cross-spectrum of halos with 
         (y_reconstructed - y_reconstructed_with_inflated_cib)
-    yy_true: 1D numpy array of length Nbins containing auto-spectrum of 
-        (y_reconstructed - y_true)
-    yy_infl: 1D numpy array of length Nbins containing auto-spectrum of 
-        (y_reconstructed - y_reconstructed_with_inflated_cib)
-    hh: 1D numpy array of length Nbins containing auto-spectrum of halo map
+    cov_hytrue: 2D numpy array of shape (Nbins, Nbins) containing Gaussian covariance 
+        matrix of halos and ytrue
+    cov_hyinfl: 2D numpy array of shape (Nbins, Nbins) containing Gaussian covariance 
+        matrix of halos and ytrue
 
     RETURNS
     -------
     None (saves plots in {output_dir}/plot_correlations)
     '''
-    # compute covariances
-    cov_hytrue = cov(inp, np.array([[yy_true, hy_true], [hy_true, hh]]))
-    cov_hyinfl = cov(inp, np.array([[yy_infl, hy_infl], [hy_infl, hh]]))
 
     # plot
     ells = np.arange(inp.ellmax+1)
@@ -49,7 +45,7 @@ def plot_corr_harmonic(inp, beta, hy_true, hy_infl, yy_true, yy_infl, hh):
     plt.savefig(f'{inp.output_dir}/correlation_plots/beta_{beta:0.3f}.png')
 
     # save mean_ells, spectra, and errors to plot later
-    to_save = [mean_ells, to_dl, hy_true, hy_infl, yy_true, yy_infl, hh]
+    to_save = [mean_ells, to_dl, hy_true, hy_infl, cov_hytrue, cov_hyinfl]
     pickle.dump(to_save, open(f'{inp.output_dir}/correlation_plots/beta_{beta:0.3f}.p', 'wb'))
 
     return

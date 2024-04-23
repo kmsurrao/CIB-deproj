@@ -12,7 +12,7 @@ ells_per_bin: 100
 # list of integer frequencies (GHz) to use in harmonic ILC calculation
 # These must be a subset of the Planck HFI frequencies (100, 143, 217, 353, 545), 
 # listed in increasing order
-frequencies: [100, 143]
+frequencies: [100, 143, 217, 353, 545]
 
 # ILC type (either 'harmonic' or 'needlet')
 ILC_type: 'needlet'
@@ -36,7 +36,7 @@ num_parallel: 16
 cib_inflation: [1.0, 10.0]
 
 # fraction of Planck noise power spectrum to use in the production of frequency maps 
-planck_noise_fraction: 0.01
+planck_noise_fraction: 0.1
 
 # whether to compute Gaussian covariance in harmonic space or 
 # use real space correlations with treecorr

@@ -110,7 +110,7 @@ def compute_chi2_real_space(inp, y1, y2, ra_halos, dec_halos, beta):
     return chi2, xi_hy, cov_hy, r_hy
 
 
-def compute_chi2_harmonic_space(inp, y1, y2, h):
+def compute_chi2_harmonic_space(inp, y1, y2, h, ytrue):
     '''
     ARGUMENTS
     ---------
@@ -119,20 +119,22 @@ def compute_chi2_harmonic_space(inp, y1, y2, h):
     y2: 1D numpy array in RING format containing true y map
         (or y map with inflated CIB)
     h: 1D numpy array in RING format containing halo map
+    ytrue: 1D numpy array in RING format containing true y map
 
     RETURNS
     -------
     chi2: float, chi^2 value of <h,y1> and <h,y2>
-    hy: 1D numpy array of length Nbins containing cross-spectrum of halos with (y1-y2)
-    yy: 1D numpy array of length Nbins containing auto-spectrum of (y1-y2)
-    hh: 1D numpy array of length Nbins containing auto-spectrum of halos
+    hydiff: 1D numpy array of length Nbins containing cross-spectrum of halos with (y1-y2)
+    cov_hy: 2D numpy array of shape (Nbins, Nbins) containing Gaussian covariance 
+        matrix of halos and ytrue
     '''
-    hy = binned(inp, hp.anafast(h, y1-y2, lmax=inp.ellmax))
     hh = binned(inp, hp.anafast(h, lmax=inp.ellmax))
-    yy = binned(inp, hp.anafast(y1-y2, lmax=inp.ellmax))
-    cov_hy = cov(inp, np.array([[hh, hy], [hy, yy]]))
-    chi2 = np.dot(hy, np.dot(np.linalg.inv(cov_hy), hy))
-    return chi2, hy, yy, hh
+    hydiff = binned(inp, hp.anafast(h, y1-y2, lmax=inp.ellmax))
+    hytrue = binned(inp, hp.anafast(h, ytrue, lmax=inp.ellmax))
+    ytrueytrue = binned(inp, hp.anafast(ytrue, lmax=inp.ellmax))
+    cov_hy = cov(inp, np.array([[hh, hytrue], [hytrue, ytrueytrue]]))
+    chi2 = np.dot(hydiff, np.dot(np.linalg.inv(cov_hy), hydiff))
+    return chi2, hydiff, cov_hy
 
 
 def compare_chi2(inp, env, beta, ra_halos, dec_halos, h):
@@ -156,9 +158,9 @@ def compare_chi2(inp, env, beta, ra_halos, dec_halos, h):
     y_recon = setup_pyilc(inp, env, beta, inflated=False, suppress_printing=(not inp.debug))
     y_recon_inflated = setup_pyilc(inp, env, beta, inflated=True, suppress_printing=(not inp.debug))
     if inp.harmonic_space:
-        chi2_true, hy_true, yy_true, hh = compute_chi2_harmonic_space(inp, y_recon, y_true, h)
-        chi2_inflated, hy_infl, yy_infl, hh = compute_chi2_harmonic_space(inp, y_recon, y_recon_inflated, h)
-        plot_corr_harmonic(inp, beta, hy_true, hy_infl, yy_true, yy_infl, hh)
+        chi2_true, hy_true, cov_hytrue = compute_chi2_harmonic_space(inp, y_recon, y_true, h)
+        chi2_inflated, hy_infl, cov_hyinfl = compute_chi2_harmonic_space(inp, y_recon, y_recon_inflated, h)
+        plot_corr_harmonic(inp, beta, hy_true, hy_infl, cov_hytrue, cov_hyinfl)
     else:   
         chi2_true, hy_true, cov_hytrue, r_hy = compute_chi2_real_space(inp, y_recon, y_true, ra_halos, dec_halos, beta)
         chi2_inflated, hy_infl, cov_hyinfl, r_hy = compute_chi2_real_space(inp, y_recon, y_recon_inflated, ra_halos, dec_halos, beta)
