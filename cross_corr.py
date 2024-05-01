@@ -2,6 +2,7 @@ import numpy as np
 import healpy as hp
 import treecorr
 import os
+import pickle
 from get_y_map import setup_pyilc
 from utils import binned, cov
 from plot_correlations import plot_corr_harmonic, plot_corr_real
@@ -42,7 +43,7 @@ def randsphere(num, ra_range=[0,360], dec_range=[-90,90]):
 
 
 
-def compute_chi2_real_space(inp, y1, y2, ra_halos, dec_halos, beta):
+def compute_chi2_real_space(inp, y1, y2, ra_halos, dec_halos, beta, compute_cov=False):
     '''
     ARGUMENTS
     ---------
@@ -53,13 +54,12 @@ def compute_chi2_real_space(inp, y1, y2, ra_halos, dec_halos, beta):
     ra_halos: ndarray containing ra of halos
     dec_halos: ndarray containing dec of halos
     beta: float, beta value used for CIB deprojection (just used for file naming here)
+    compute_cov: Bool, whether to compute the covariance matrix
 
     RETURNS
     -------
     chi2: float, chi^2 value of <h,y1> and <h,y2>
     xi_hy: 1D numpy array of length nrad containing correlation of halos with (y1-y2)
-    cov_hy: 2D numpy array of shape (nrad, nrad) containing covariance 
-        matrix of halos and (y1-y2)
     r_hy: 1D numpy array of length nrad containing x-axis point for plotting
     '''
     rand_ra, rand_dec = randsphere(5*len(ra_halos), ra_range=[0,360], dec_range=[-90,90])
@@ -91,26 +91,33 @@ def compute_chi2_real_space(inp, y1, y2, ra_halos, dec_halos, beta):
     
     # Create random catalog and catalog for (y1-y2)
     rand_cat = treecorr.Catalog(ra=rand_ra, dec=rand_dec, ra_units='degrees', dec_units='degrees', patch_centers=save_dir + save_filename_jk_obj)
-    y_cat = treecorr.Catalog(ra=ra_hp, dec=dec_hp, k=(y1-y2), ra_units='degrees', dec_units='degrees')
+    ydiff_cat = treecorr.Catalog(ra=ra_hp, dec=dec_hp, k=(y1-y2), ra_units='degrees', dec_units='degrees')
 
     # create the correlation objects:
-    hy = treecorr.NKCorrelation(nbins=nrad, min_sep=minrad, max_sep=maxrad, sep_units='arcmin', verbose=0, num_threads=nthreads, bin_slop=bin_slop, var_method='jackknife')
+    hydiff = treecorr.NKCorrelation(nbins=nrad, min_sep=minrad, max_sep=maxrad, sep_units='arcmin', verbose=0, num_threads=nthreads, bin_slop=bin_slop, var_method='jackknife')
     ry = treecorr.NKCorrelation(nbins=nrad, min_sep=minrad, max_sep=maxrad, sep_units='arcmin', verbose=0, num_threads=nthreads, bin_slop=bin_slop, var_method='jackknife')
 
-    hy.process(datapoint_cat, y_cat)
-    ry.process(rand_cat, y_cat)
+    hydiff.process(datapoint_cat, ydiff_cat)
+    ry.process(rand_cat, ydiff_cat)
 
-    hy.calculateXi(rk=ry)
-    xi_hy = hy.xi
-    cov_hy = hy.cov
-    r_hy = np.exp(hy.meanlogr)
+    hydiff.calculateXi(rk=ry)
+    xi_hy = hydiff.xi
+    r_hy = np.exp(hydiff.meanlogr)
+    
+    if compute_cov:
+        y1_cat = treecorr.Catalog(ra=ra_hp, dec=dec_hp, k=y1, ra_units='degrees', dec_units='degrees')
+        hy1 = treecorr.NKCorrelation(nbins=nrad, min_sep=minrad, max_sep=maxrad, sep_units='arcmin', verbose=0, num_threads=nthreads, bin_slop=bin_slop, var_method='jackknife')
+        hy1.process(datapoint_cat, y1_cat)
+        cov_hy = hy1.cov
+        inp.cov = cov_hy # (nrad, nrad) ndarray containing covariance matrix of halos and y1
+        pickle.dump(inp.cov, open(f'{inp.output_dir}/correlation_plots/cov.p', 'wb'))
 
-    chi2 = np.dot(xi_hy, np.dot(np.linalg.inv(cov_hy), xi_hy))
+    chi2 = np.dot(xi_hy, np.dot(np.linalg.inv(inp.cov), xi_hy))
 
-    return chi2, xi_hy, cov_hy, r_hy
+    return chi2, xi_hy, r_hy
 
 
-def compute_chi2_harmonic_space(inp, y1, y2, h, ytrue):
+def compute_chi2_harmonic_space(inp, y1, y2, h, compute_cov=False):
     '''
     ARGUMENTS
     ---------
@@ -119,25 +126,26 @@ def compute_chi2_harmonic_space(inp, y1, y2, h, ytrue):
     y2: 1D numpy array in RING format containing true y map
         (or y map with inflated CIB)
     h: 1D numpy array in RING format containing halo map
-    ytrue: 1D numpy array in RING format containing true y map
+    compute_cov: Bool, whether to compute the covariance matrix
 
     RETURNS
     -------
     chi2: float, chi^2 value of <h,y1> and <h,y2>
     hydiff: 1D numpy array of length Nbins containing cross-spectrum of halos with (y1-y2)
-    cov_hy: 2D numpy array of shape (Nbins, Nbins) containing Gaussian covariance 
-        matrix of halos and ytrue
-    '''
-    hh = binned(inp, hp.anafast(h, lmax=inp.ellmax))
+    ''' 
     hydiff = binned(inp, hp.anafast(h, y1-y2, lmax=inp.ellmax))
-    hytrue = binned(inp, hp.anafast(h, ytrue, lmax=inp.ellmax))
-    ytrueytrue = binned(inp, hp.anafast(ytrue, lmax=inp.ellmax))
-    cov_hy = cov(inp, np.array([[hh, hytrue], [hytrue, ytrueytrue]]))
-    chi2 = np.dot(hydiff, np.dot(np.linalg.inv(cov_hy), hydiff))
-    return chi2, hydiff, cov_hy
+    if compute_cov:
+        hh = binned(inp, hp.anafast(h, lmax=inp.ellmax))
+        hy1 = binned(inp, hp.anafast(h, y1, lmax=inp.ellmax))
+        y1y1 = binned(inp, hp.anafast(y1, lmax=inp.ellmax))
+        cov_hy = cov(inp, np.array([[hh, hy1], [hy1, y1y1]]))
+        inp.cov = cov_hy # (Nbins, Nbins) ndarray containing Gaussian covariance matrix of halos and y1
+        pickle.dump(inp.cov, open(f'{inp.output_dir}/correlation_plots/cov.p', 'wb'))
+    chi2 = np.dot(hydiff, np.dot(np.linalg.inv(inp.cov), hydiff))
+    return chi2, hydiff
 
 
-def compare_chi2(inp, env, beta, ra_halos, dec_halos, h):
+def compare_chi2(inp, env, beta, ra_halos, dec_halos, h, compute_cov=False):
     '''
     ARGUMENTS
     ---------
@@ -147,6 +155,7 @@ def compare_chi2(inp, env, beta, ra_halos, dec_halos, h):
     ra_halos: ndarray containing ra of halos
     dec_halos: ndarray containing dec of halos
     h: 1D numpy array in RING format containing halo map
+    compute_cov: Bool, whether to compute the covariance matrix
 
     RETURNS
     -------
@@ -158,13 +167,13 @@ def compare_chi2(inp, env, beta, ra_halos, dec_halos, h):
     y_recon = setup_pyilc(inp, env, beta, inflated=False, suppress_printing=(not inp.debug))
     y_recon_inflated = setup_pyilc(inp, env, beta, inflated=True, suppress_printing=(not inp.debug))
     if inp.harmonic_space:
-        chi2_true, hy_true, cov_hytrue = compute_chi2_harmonic_space(inp, y_recon, y_true, h)
-        chi2_inflated, hy_infl, cov_hyinfl = compute_chi2_harmonic_space(inp, y_recon, y_recon_inflated, h)
-        plot_corr_harmonic(inp, beta, hy_true, hy_infl, cov_hytrue, cov_hyinfl)
+        chi2_true, hy_true = compute_chi2_harmonic_space(inp, y_recon, y_true, h, compute_cov=compute_cov)
+        chi2_inflated, hy_infl = compute_chi2_harmonic_space(inp, y_recon, y_recon_inflated, h, compute_cov=False)
+        plot_corr_harmonic(inp, beta, hy_true, hy_infl)
     else:   
-        chi2_true, hy_true, cov_hytrue, r_hy = compute_chi2_real_space(inp, y_recon, y_true, ra_halos, dec_halos, beta)
-        chi2_inflated, hy_infl, cov_hyinfl, r_hy = compute_chi2_real_space(inp, y_recon, y_recon_inflated, ra_halos, dec_halos, beta)
-        plot_corr_real(inp, beta, hy_true, hy_infl, cov_hytrue, cov_hyinfl, r_hy)
+        chi2_true, hy_true, r_hy = compute_chi2_real_space(inp, y_recon, y_true, ra_halos, dec_halos, beta, compute_cov=compute_cov)
+        chi2_inflated, hy_infl, r_hy = compute_chi2_real_space(inp, y_recon, y_recon_inflated, ra_halos, dec_halos, beta, compute_cov=False)
+        plot_corr_real(inp, beta, hy_true, hy_infl, r_hy)
     if inp.debug:
         print(f'chi2_true for beta={beta}: {chi2_true}', flush=True)
         print(f'chi2_inflated for beta={beta}: {chi2_inflated}', flush=True)

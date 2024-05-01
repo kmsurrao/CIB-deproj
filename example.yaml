@@ -20,17 +20,17 @@ ILC_type: 'needlet'
 # If ILC_type is 'needlet', array of FWHM (arcmin) used for constrution 
 # of Gaussians. (needlet filters are differences of two Gaussians). 
 # FWHM need to be in strictly decreasing order.
-GN_FWHM_arcmin: [300., 120., 60.] 
+GN_FWHM_arcmin: [30., 15., 7., 3.] 
 
 # range of values (inclusive) to test for beta
 beta_range: [1.0, 2.0]
 
 # number of beta values to test
-num_beta_vals: 10
+num_beta_vals: 20
 
 # number of beta values to test in parallel
 # if this input is not provided, no parallelization is assumed (num_parallel=1)
-num_parallel: 16
+num_parallel: 20
 
 # factors by which to inflate CIB and deproject for comparison
 cib_inflation: [1.0, 10.0]

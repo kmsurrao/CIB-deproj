@@ -7,7 +7,7 @@ import pickle
 import matplotlib.pyplot as plt
 from input import Info
 from halo2map import halodir2map, halofile2map
-from cross_corr import compare_chi2_star
+from cross_corr import compare_chi2, compare_chi2_star
 from utils import *
 
 
@@ -36,8 +36,11 @@ def main():
     get_freq_maps(inp)
 
     # run main computation
-    print('Running main computation...', flush=True)                                                                                                              
     beta_arr = np.linspace(inp.beta_range[0], inp.beta_range[1], num=inp.num_beta_vals)
+    mean_beta = beta_arr[len(beta_arr)//2]
+    print(f'Computing covariance matrix using beta={mean_beta:0.3f}...', flush=True) 
+    compare_chi2(inp, env, mean_beta, ra_halos, dec_halos, h, compute_cov=True)
+    print('Running main computation...', flush=True)                                                                                                              
     pool = mp.Pool(inp.num_parallel)
     inputs = [(inp, env, beta, ra_halos, dec_halos, h) for beta in beta_arr]
     results = list(tqdm.tqdm(pool.imap(compare_chi2_star, inputs), total=len(beta_arr)))
