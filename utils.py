@@ -137,28 +137,6 @@ def multifrequency_cov(inp, S, N):
     return covar
 
 
-def cov(inp, Cl):
-    '''
-    Computes Gaussian covariance in harmonic space
-
-    ARGUMENTS
-    ---------
-    inp: Info object containing input parameter specifications
-    Cl: 3D numpy array of shape (2, 2, Nbins) containing binned power spectra
-        Cl[0,0] = Cl^{hh}
-        Cl[0,1] = Cl[1,0] = Cl^{hy}
-        Cl[1,1] = Cl^{yy}
-
-    RETURNS
-    -------
-    covar: 2D numpy array of shape (Nbins, Nbins)
-        containing Gaussian covariance matrix
-    '''
-    Nmodes = 1/((2*inp.mean_ells+1)*inp.ells_per_bin)
-    covar = np.diag(Nmodes*(Cl[0,1]**2 + Cl[0,0]*Cl[1,1]))
-    return covar
-
-
 def get_freq_maps(inp):
     '''
     ARGUMENTS

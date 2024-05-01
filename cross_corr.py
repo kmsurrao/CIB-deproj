@@ -2,9 +2,8 @@ import numpy as np
 import healpy as hp
 import treecorr
 import os
-import pickle
 from get_y_map import setup_pyilc
-from utils import binned, cov
+from utils import binned
 from plot_correlations import plot_corr_harmonic, plot_corr_real
 
 def randsphere(num, ra_range=[0,360], dec_range=[-90,90]):
@@ -42,8 +41,102 @@ def randsphere(num, ra_range=[0,360], dec_range=[-90,90]):
     return ra, dec
 
 
+def real_space_cov(inp, y1, ra_halos, dec_halos, beta):
+    '''
+    ARGUMENTS
+    ---------
+    inp: Info object containing input parameter specifications
+    y1: 1D numpy array in RING format containing reconstructed y map
+    ra_halos: ndarray containing ra of halos
+    dec_halos: ndarray containing dec of halos
+    beta: float, beta value used for CIB deprojection (just used for file naming here)
 
-def compute_chi2_real_space(inp, y1, y2, ra_halos, dec_halos, beta, compute_cov=False):
+    RETURNS
+    -------
+    cov_hy: (nrad, nrad) ndarray containing covariance matrix of halos and y1
+    '''
+    ra_hp, dec_hp = hp.pix2ang(inp.nside, ipix=np.arange(hp.nside2npix(inp.nside)),lonlat=True)
+    
+    save_dir = f'{inp.output_dir}/results_test/'
+    save_filename_jk_obj = f'jk_obj_test_beta{beta:.2f}.pkl'
+
+    # number of patches to divide the full sky on. More of these, better the covariance estimate would be. Just make sure the size of patches is larger than the maximum separation you are interested in.
+    njk = 512
+    nthreads = 256//(4*inp.num_beta_vals)
+    # This is the accuracy setting. If the bin_slop is set to 0.0, it will take longer to run but correlation would be correct. If you want to run it faster, increase the bin_slop to 0.1 or 0.2. This will make the code run faster, but the correlation estimate will be less accurate.
+    bin_slop = 0.0
+
+    # minrad and maxrad are the minimum and maximum separation you are interested in. This is in arcmin. nrad is the number of bins you want to divide the separation range into.
+    minrad = 3.0
+    maxrad = 100.0
+    nrad = 10
+
+    # Load the catalogs in treecorr format
+    if os.path.isfile(save_dir + save_filename_jk_obj):
+        datapoint_cat = treecorr.Catalog(ra=ra_halos, dec=dec_halos, ra_units='degrees',
+                                    dec_units='degrees', patch_centers=save_dir + save_filename_jk_obj)           
+
+    else:
+        datapoint_cat = treecorr.Catalog(ra=ra_halos, dec=dec_halos,  ra_units='degrees',
+                                        dec_units='degrees', npatch=njk)
+        datapoint_cat.write_patch_centers(save_dir + save_filename_jk_obj)
+    
+
+    y1_cat = treecorr.Catalog(ra=ra_hp, dec=dec_hp, k=y1, ra_units='degrees', dec_units='degrees')
+    hy1 = treecorr.NKCorrelation(nbins=nrad, min_sep=minrad, max_sep=maxrad, sep_units='arcmin', verbose=0, num_threads=nthreads, bin_slop=bin_slop, var_method='jackknife')
+    hy1.process(datapoint_cat, y1_cat)
+    cov_hy = hy1.cov
+    return cov_hy
+
+
+def harmonic_space_cov(inp, y1, h):
+    '''
+    ARGUMENTS
+    ---------
+    inp: Info object containing input parameter specifications
+    y1: 1D numpy array in RING format containing reconstructed y map
+    h: 1D numpy array in RING format containing halo map
+
+    RETURNS
+    -------
+    cov_hy: (Nbins, Nbins) ndarray containing Gaussian covariance matrix of halos and y1
+    ''' 
+    hh = binned(inp, hp.anafast(h, lmax=inp.ellmax))
+    hy1 = binned(inp, hp.anafast(h, y1, lmax=inp.ellmax))
+    y1y1 = binned(inp, hp.anafast(y1, lmax=inp.ellmax))
+    Nmodes = 1/((2*inp.mean_ells+1)*inp.ells_per_bin)
+    cov_hy = np.diag(Nmodes*(hy1**2 + hh*y1y1))
+    return cov_hy
+
+
+def cov(inp, env, beta, ra_halos, dec_halos, h):
+    '''
+    ARGUMENTS
+    ---------
+    inp: Info object containing input parameter specifications
+    env: environment object
+    beta: float, value of beta for CIB deprojection
+    ra_halos: ndarray containing ra of halos
+    dec_halos: ndarray containing dec of halos
+    h: 1D numpy array in RING format containing halo map
+
+    RETURNS
+    -------
+    cov_hy: if in real space, (nrad, nrad) ndarray containing covariance matrix of halos and y_recon
+            if in harmonic space, (Nbins, Nbins) ndarray containing Gaussian covariance matrix of halos and y_recon
+
+    '''
+    y_true = hp.read_map(inp.tsz_map_file)
+    y_true = hp.ud_grade(y_true, inp.nside)
+    y_recon = setup_pyilc(inp, env, beta, inflated=False, suppress_printing=(not inp.debug))
+    if inp.harmonic_space:
+        cov_hy = harmonic_space_cov(inp, y_recon, h)
+    else: 
+        cov_hy = real_space_cov(inp, y_recon, ra_halos, dec_halos, beta)
+    return cov_hy
+
+
+def compute_chi2_real_space(inp, y1, y2, ra_halos, dec_halos, beta):
     '''
     ARGUMENTS
     ---------
@@ -54,7 +147,6 @@ def compute_chi2_real_space(inp, y1, y2, ra_halos, dec_halos, beta, compute_cov=
     ra_halos: ndarray containing ra of halos
     dec_halos: ndarray containing dec of halos
     beta: float, beta value used for CIB deprojection (just used for file naming here)
-    compute_cov: Bool, whether to compute the covariance matrix
 
     RETURNS
     -------
@@ -103,21 +195,13 @@ def compute_chi2_real_space(inp, y1, y2, ra_halos, dec_halos, beta, compute_cov=
     hydiff.calculateXi(rk=ry)
     xi_hy = hydiff.xi
     r_hy = np.exp(hydiff.meanlogr)
-    
-    if compute_cov:
-        y1_cat = treecorr.Catalog(ra=ra_hp, dec=dec_hp, k=y1, ra_units='degrees', dec_units='degrees')
-        hy1 = treecorr.NKCorrelation(nbins=nrad, min_sep=minrad, max_sep=maxrad, sep_units='arcmin', verbose=0, num_threads=nthreads, bin_slop=bin_slop, var_method='jackknife')
-        hy1.process(datapoint_cat, y1_cat)
-        cov_hy = hy1.cov
-        inp.cov = cov_hy # (nrad, nrad) ndarray containing covariance matrix of halos and y1
-        pickle.dump(inp.cov, open(f'{inp.output_dir}/correlation_plots/cov.p', 'wb'))
 
     chi2 = np.dot(xi_hy, np.dot(np.linalg.inv(inp.cov), xi_hy))
 
     return chi2, xi_hy, r_hy
 
 
-def compute_chi2_harmonic_space(inp, y1, y2, h, compute_cov=False):
+def compute_chi2_harmonic_space(inp, y1, y2, h):
     '''
     ARGUMENTS
     ---------
@@ -126,7 +210,6 @@ def compute_chi2_harmonic_space(inp, y1, y2, h, compute_cov=False):
     y2: 1D numpy array in RING format containing true y map
         (or y map with inflated CIB)
     h: 1D numpy array in RING format containing halo map
-    compute_cov: Bool, whether to compute the covariance matrix
 
     RETURNS
     -------
@@ -134,18 +217,11 @@ def compute_chi2_harmonic_space(inp, y1, y2, h, compute_cov=False):
     hydiff: 1D numpy array of length Nbins containing cross-spectrum of halos with (y1-y2)
     ''' 
     hydiff = binned(inp, hp.anafast(h, y1-y2, lmax=inp.ellmax))
-    if compute_cov:
-        hh = binned(inp, hp.anafast(h, lmax=inp.ellmax))
-        hy1 = binned(inp, hp.anafast(h, y1, lmax=inp.ellmax))
-        y1y1 = binned(inp, hp.anafast(y1, lmax=inp.ellmax))
-        cov_hy = cov(inp, np.array([[hh, hy1], [hy1, y1y1]]))
-        inp.cov = cov_hy # (Nbins, Nbins) ndarray containing Gaussian covariance matrix of halos and y1
-        pickle.dump(inp.cov, open(f'{inp.output_dir}/correlation_plots/cov.p', 'wb'))
     chi2 = np.dot(hydiff, np.dot(np.linalg.inv(inp.cov), hydiff))
     return chi2, hydiff
 
 
-def compare_chi2(inp, env, beta, ra_halos, dec_halos, h, compute_cov=False):
+def compare_chi2(inp, env, beta, ra_halos, dec_halos, h):
     '''
     ARGUMENTS
     ---------
@@ -155,7 +231,6 @@ def compare_chi2(inp, env, beta, ra_halos, dec_halos, h, compute_cov=False):
     ra_halos: ndarray containing ra of halos
     dec_halos: ndarray containing dec of halos
     h: 1D numpy array in RING format containing halo map
-    compute_cov: Bool, whether to compute the covariance matrix
 
     RETURNS
     -------
@@ -167,12 +242,12 @@ def compare_chi2(inp, env, beta, ra_halos, dec_halos, h, compute_cov=False):
     y_recon = setup_pyilc(inp, env, beta, inflated=False, suppress_printing=(not inp.debug))
     y_recon_inflated = setup_pyilc(inp, env, beta, inflated=True, suppress_printing=(not inp.debug))
     if inp.harmonic_space:
-        chi2_true, hy_true = compute_chi2_harmonic_space(inp, y_recon, y_true, h, compute_cov=compute_cov)
-        chi2_inflated, hy_infl = compute_chi2_harmonic_space(inp, y_recon, y_recon_inflated, h, compute_cov=False)
+        chi2_true, hy_true = compute_chi2_harmonic_space(inp, y_recon, y_true, h)
+        chi2_inflated, hy_infl = compute_chi2_harmonic_space(inp, y_recon, y_recon_inflated, h)
         plot_corr_harmonic(inp, beta, hy_true, hy_infl)
     else:   
-        chi2_true, hy_true, r_hy = compute_chi2_real_space(inp, y_recon, y_true, ra_halos, dec_halos, beta, compute_cov=compute_cov)
-        chi2_inflated, hy_infl, r_hy = compute_chi2_real_space(inp, y_recon, y_recon_inflated, ra_halos, dec_halos, beta, compute_cov=False)
+        chi2_true, hy_true, r_hy = compute_chi2_real_space(inp, y_recon, y_true, ra_halos, dec_halos, beta)
+        chi2_inflated, hy_infl, r_hy = compute_chi2_real_space(inp, y_recon, y_recon_inflated, ra_halos, dec_halos, beta)
         plot_corr_real(inp, beta, hy_true, hy_infl, r_hy)
     if inp.debug:
         print(f'chi2_true for beta={beta}: {chi2_true}', flush=True)
