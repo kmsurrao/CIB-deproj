@@ -161,8 +161,13 @@ def get_freq_maps(inp):
         cib_map = hp.read_map(f'{inp.cib_map_dir}/mdpl2_len_mag_cibmap_planck_{freq}_uk.fits')
         cib_map = 10**(-6)*hp.ud_grade(cib_map, inp.nside) #units of K
         cib_map = initial_masking(inp, cib_map, cib_map_143)
-        freq_map_uninflated = tsz_map + inp.cib_inflation[0]*cib_map + noise_map
-        freq_map_inflated = tsz_map + inp.cib_inflation[1]*cib_map + noise_map
+        additional_maps = np.zeros(12*inp.nside**2, dtype=np.float32)
+        if 'kSZ' in inp.components:
+            additional_maps += 10**(-6)*hp.ud_grade(hp.read_map(inp.ksz_map_file), inp.nside)
+        if 'CMB' in inp.components:
+            additional_maps += 10**(-6)*hp.ud_grade(hp.read_map(inp.cmb_map_file), inp.nside)
+        freq_map_uninflated = tsz_map + inp.cib_inflation[0]*cib_map + noise_map + additional_maps
+        freq_map_inflated = tsz_map + inp.cib_inflation[1]*cib_map + noise_map + additional_maps
         hp.write_map(f'{inp.output_dir}/maps/uninflated_{freq}.fits', freq_map_uninflated, overwrite=True, dtype=np.float32)
         hp.write_map(f'{inp.output_dir}/maps/inflated_{freq}.fits', freq_map_inflated, overwrite=True, dtype=np.float32)
         if inp.debug:

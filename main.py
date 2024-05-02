@@ -7,7 +7,7 @@ import pickle
 import matplotlib.pyplot as plt
 from input import Info
 from halo2map import halodir2map, halofile2map
-from cross_corr import cov, compare_chi2_star
+from cross_corr import cov, get_all_ymaps_star, compare_chi2_star
 from utils import *
 
 
@@ -35,15 +35,29 @@ def main():
     print('Getting maps at different frequencies...', flush=True)
     get_freq_maps(inp)
 
-    # run main computation
-    beta_arr = np.linspace(inp.beta_range[0], inp.beta_range[1], num=inp.num_beta_vals)
-    mean_beta = beta_arr[len(beta_arr)//2]
-    print(f'Computing covariance matrix using beta={mean_beta:0.3f}...', flush=True) 
-    inp.cov = cov(inp, env, mean_beta, ra_halos, dec_halos, h) 
-    pickle.dump(inp.cov, open(f'{inp.output_dir}/correlation_plots/cov.p', 'wb'))
-    print('Running main computation...', flush=True)                                                                                                              
+
+    # Build y-maps with pyilc
+    print('Building y-maps...')
+    beta_arr = np.linspace(inp.beta_range[0], inp.beta_range[1], num=inp.num_beta_vals) 
     pool = mp.Pool(inp.num_parallel)
-    inputs = [(inp, env, beta, ra_halos, dec_halos, h) for beta in beta_arr]
+    inputs = [(inp, env, beta) for beta in beta_arr]
+    tqdm.tqdm(pool.imap(get_all_ymaps_star, inputs), total=len(beta_arr))
+    pool.close()
+    
+
+    # Compute covariance matrix
+    print(f'Computing covariance matrix using beta={mean_beta:0.3f}...', flush=True) 
+    mean_beta = beta_arr[len(beta_arr)//2]
+    inp.cov_hytrue = cov(inp, mean_beta, ra_halos, dec_halos, h, inflated=False) 
+    inp.cov_hyinfl = cov(inp, mean_beta, ra_halos, dec_halos, h, inflated=True) 
+    pickle.dump(inp.cov_hytrue, open(f'{inp.output_dir}/correlation_plots/cov_hytrue.p', 'wb'))
+    pickle.dump(inp.cov_hyinfl, open(f'{inp.output_dir}/correlation_plots/cov_hyinfl.p', 'wb'))
+
+
+    # Compute chi2 values
+    print('Computing chi2 values...', flush=True)                                                                                                     
+    pool = mp.Pool(inp.num_parallel)
+    inputs = [(inp, beta, ra_halos, dec_halos, h) for beta in beta_arr]
     results = list(tqdm.tqdm(pool.imap(compare_chi2_star, inputs), total=len(beta_arr)))
     pool.close()
     results = np.array(results, dtype=np.float32)
@@ -52,6 +66,7 @@ def main():
     print('\ngot chi2 values', flush=True)
     print('chi2_true_arr: ', chi2_true_arr, flush=True)
     print('chi2_inflated_arr: ', chi2_inflated_arr, flush=True)
+
 
     # save files and plot
     pickle.dump(beta_arr, open(f'{inp.output_dir}/beta_arr.p', 'wb'))

@@ -31,8 +31,8 @@ def plot_corr_harmonic(inp, beta, hy_true, hy_infl):
     mean_ells = (res[1][:-1]+res[1][1:])/2
     to_dl = mean_ells*(mean_ells+1)/2/np.pi
     plt.clf()
-    plt.errorbar(mean_ells, to_dl*hy_true, label=r'$C_\ell^{h, (\mathrm{yrecon.-ytrue})}$', yerr=to_dl*np.sqrt(np.diagonal(inp.cov)), linestyle='solid')
-    plt.errorbar(mean_ells, to_dl*hy_infl, label=r'$C_\ell^{h, (\mathrm{yrecon.-yreconinflcib})}$', yerr=to_dl*np.sqrt(np.diagonal(inp.cov)), linestyle='dashed')
+    plt.errorbar(mean_ells, to_dl*hy_true, label=r'$C_\ell^{h, (\mathrm{yrecon.-ytrue})}$', yerr=to_dl*np.sqrt(np.diagonal(inp.cov_hytrue)), linestyle='solid')
+    plt.errorbar(mean_ells, to_dl*hy_infl, label=r'$C_\ell^{h, (\mathrm{yrecon.-yreconinflcib})}$', yerr=to_dl*np.sqrt(np.diagonal(inp.cov_hyinfl)), linestyle='dashed')
     plt.grid()
     plt.ylabel(r'$\ell(\ell+1)C_\ell /(2\pi)$ [$\mu \mathrm{K}^2$]')
     plt.xlabel(r'$\ell$')
@@ -68,8 +68,8 @@ def plot_corr_real(inp, beta, hy_true, hy_infl, r_hy):
 
     # plot
     plt.clf()
-    plt.errorbar(r_hy, hy_true, yerr=np.sqrt(np.diag(inp.cov)), ls='', marker='v', ms=3.0, label='h x (y recon. - y true)')
-    plt.errorbar(1.02*r_hy, hy_infl, yerr=np.sqrt(np.diag(inp.cov)), ls='', marker='o', ms=3.0, label='h x (y recon. - y recon. (CIB inflated))')
+    plt.errorbar(r_hy, hy_true, yerr=np.sqrt(np.diag(inp.cov_hytrue)), ls='', marker='v', ms=3.0, label='h x (y recon. - y true)')
+    plt.errorbar(1.02*r_hy, hy_infl, yerr=np.sqrt(np.diag(inp.cov_hyinfl)), ls='', marker='o', ms=3.0, label='h x (y recon. - y recon. (CIB inflated))')
     plt.legend()
     plt.xscale('log')
     plt.yscale('log')

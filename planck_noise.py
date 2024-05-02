@@ -45,6 +45,7 @@ def get_planck_noise(inp):
     FWHM_arr_Planck[5] = 5.02
     FWHM_arr_Planck[6] = 4.94
     FWHM_arr_Planck[7] = 4.83 #arcmin
+    # FWHM_arr_Planck /= 10. #reduce beam FWHHM, can remove later
 
     # convert to sigma in radians
     sigma_arr_Planck = FWHM_arr_Planck / np.sqrt(8. * np.log(2)) /60. * np.pi/180.

@@ -1,6 +1,7 @@
 import subprocess
 import yaml
 import healpy as hp
+import os
 
 
 def setup_pyilc(inp, env, beta, suppress_printing=False, inflated=False, standard_ilc=False):
@@ -102,3 +103,41 @@ def setup_pyilc(inp, env, beta, suppress_printing=False, inflated=False, standar
     
     
     return ymap
+
+
+def get_all_ymaps(inp, env, beta):
+    '''
+    ARGUMENTS
+    ---------
+    inp: Info object containing input parameter specifications
+    env: environment object
+    beta: float, value of beta for CIB deprojection
+
+    RETURNS
+    -------
+    None
+
+    '''
+    y_recon_file = f"{inp.output_dir}/pyilc_outputs/beta_{beta:.2f}_uninflated/needletILCmap_component_tSZ_deproject_CIB.fits"
+    y_recon_infl_file = f"{inp.output_dir}/pyilc_outputs/beta_{beta:.2f}_inflated/needletILCmap_component_tSZ_deproject_CIB.fits"
+    if not os.path.isfile(y_recon_file):
+        setup_pyilc(inp, env, beta, inflated=False, suppress_printing=(not inp.debug))
+    if not os.path.isfile(y_recon_infl_file):
+        setup_pyilc(inp, env, beta, inflated=True, suppress_printing=(not inp.debug))
+    return None
+
+
+def get_all_ymaps_star(args):
+    '''
+    Useful for using multiprocessing imap
+    (imap supports tqdm but starmap does not)
+
+    ARGUMENTS
+    ---------
+    args: arguments to function get_all_ymaps
+
+    RETURNS
+    -------
+    function of *args, get_all_ymaps(inp, env, beta)
+    '''
+    return get_all_ymaps(*args)

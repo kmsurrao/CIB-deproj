@@ -38,6 +38,9 @@ class Info(object):
         # frequencies assumed to be in strictly increasing order
         if ( any( i >= j for i, j in zip(self.frequencies, self.frequencies[1:]))):
             raise AssertionError
+        self.components = p['components']
+        assert 'tSZ' in self.components and 'CIB' in self.components, "'tSZ' and 'CIB' must be in components list"
+        assert set(self.components).issubset({'tSZ', 'CIB', 'CMB', 'kSZ'}), "Allowed components are 'tSZ', 'CIB', 'CMB', 'kSZ'"
         self.ILC_type = p['ILC_type']
         assert self.ILC_type in {'harmonic', 'needlet'}, "ILC_type must be either 'needlet' or 'harmonic'"
         if self.ILC_type == 'needlet':
@@ -65,6 +68,14 @@ class Info(object):
         self.tsz_map_file = p['tsz_map_file']
         assert type(self.tsz_map_file) is str, "TypeError: tsz_map_file must be str"
         assert os.path.isfile(self.tsz_map_file), f"{self.tsz_map_file} does not exist"
+        if 'kSZ' in self.components:
+            self.ksz_map_file = p['ksz_map_file']
+            assert type(self.ksz_map_file) is str, "TypeError: ksz_map_file must be str"
+            assert os.path.isfile(self.ksz_map_file), f"{self.ksz_map_file} does not exist"
+        if 'CMB' in self.components:
+            self.cmb_map_file = p['cmb_map_file']
+            assert type(self.cmb_map_file) is str, "TypeError: cmb_map_file must be str"
+            assert os.path.isfile(self.cmb_map_file), f"{self.cmb_map_file} does not exist"
         assert 'halo_catalog' in p or 'halo_files_dir' in p, "Either halo_catalog or halo_files_dir must be defined"
         if 'halo_catalog' in p: #check for halo_catalog before halo_files_dir since using a single halo catalog is faster
             self.halo_catalog = p['halo_catalog']
