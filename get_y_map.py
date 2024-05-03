@@ -115,7 +115,7 @@ def get_all_ymaps(inp, env, beta):
 
     RETURNS
     -------
-    None
+    1
 
     '''
     y_recon_file = f"{inp.output_dir}/pyilc_outputs/beta_{beta:.2f}_uninflated/needletILCmap_component_tSZ_deproject_CIB.fits"
@@ -124,7 +124,7 @@ def get_all_ymaps(inp, env, beta):
         setup_pyilc(inp, env, beta, inflated=False, suppress_printing=(not inp.debug))
     if not os.path.isfile(y_recon_infl_file):
         setup_pyilc(inp, env, beta, inflated=True, suppress_printing=(not inp.debug))
-    return None
+    return 1
 
 
 def get_all_ymaps_star(args):
