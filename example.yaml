@@ -1,7 +1,7 @@
 # nside resolution parameter of maps
 nside: 1024
 
-# maximum ell for which to compute chi^2
+# maximum ell for which to compute chi^2 and perform harmonic ILC
 ellmax: 2000
 
 # If ILC_type is 'harmonic', this is the number of multipoles per bin 
@@ -16,7 +16,7 @@ frequencies: [100, 143, 217, 353, 545]
 
 # Components to include in the frequency maps. At minimum, this list must include
 # 'tSZ' and 'CIB'. Other options are 'CMB' and 'kSZ'.
-components: ['tSZ', 'CIB', 'CMB', 'kSZ']
+components: ['tSZ', 'CIB']
 
 # ILC type (either 'harmonic' or 'needlet')
 ILC_type: 'needlet'
@@ -40,7 +40,7 @@ num_parallel: 20
 cib_inflation: [1.0, 10.0]
 
 # fraction of Planck noise power spectrum to use in the production of frequency maps 
-planck_noise_fraction: 1.0
+planck_noise_fraction: 0.1
 
 # whether to compute Gaussian covariance in harmonic space or 
 # use real space correlations with treecorr
@@ -80,7 +80,7 @@ halo_catalog: '/scratch/09334/ksurrao/halo_files/haloslc_agora_zsel_0_to_0.3_Mse
 pyilc_path: '/work2/09334/ksurrao/stampede3/Github/pyilc'
 
 # directory in which to save outputs
-output_dir: '/scratch/09334/ksurrao/cib_beta'
+output_dir: '/scratch/09334/ksurrao/cib_beta_new_noise'
 
 # If debug is True, there will be more intermediate printing
 debug: False

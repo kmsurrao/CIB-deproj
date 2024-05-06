@@ -4,7 +4,8 @@ import subprocess
 import os
 import yaml
 from scipy import stats
-from planck_noise import get_planck_noise
+from scipy import interpolate
+from planck_noise import get_planck_noise, get_planck_specs
 from inpaint_pixels import initial_masking
 
 def write_beta_yamls(inp):
@@ -147,16 +148,27 @@ def get_freq_maps(inp):
     -------
     None (writes frequency maps to output_dir)
     '''
-    PS_noise_Planck = get_planck_noise(inp)
-    planck_freqs = [30, 44, 70, 100, 143, 217, 353, 545]
+    # PS_noise_Planck = get_planck_noise(inp)
+    # planck_freqs = [30, 44, 70, 100, 143, 217, 353, 545]
+    planck_freq, planck_noise, planck_beam = get_planck_specs()
+    planck_noise_interp = interpolate.interp1d(planck_freq, planck_noise)
+
     tsz_response_vec = tsz_spectral_response(inp.frequencies)
     ymap = hp.read_map(inp.tsz_map_file)
     ymap = hp.ud_grade(ymap, inp.nside) #unitless
     cib_map_143 = 10**(-6)*hp.ud_grade(hp.read_map(f'{inp.cib_map_dir}/mdpl2_len_mag_cibmap_planck_143_uk.fits'), inp.nside) #units of K
+
     for i, freq in enumerate(inp.frequencies):
-        idx = planck_freqs.index(freq)
-        PS_noise = inp.planck_noise_fraction*PS_noise_Planck[idx]
-        noise_map = 10**(-6)*hp.synfast(PS_noise, nside=inp.nside) #units of K
+
+        # idx = planck_freqs.index(freq)
+        # PS_noise = inp.planck_noise_fraction*PS_noise_Planck[idx]
+        # noise_map = 10**(-6)*hp.synfast(PS_noise, nside=inp.nside) #units of K
+        npix = hp.nside2npix(inp.nside)
+        pix_side_arcmin = 60. * (180. / np.pi) * np.sqrt(4. * np.pi / npix)
+        noise_level = planck_noise_interp(freq)
+        noise_sigma = noise_level / pix_side_arcmin
+        noise_map = inp.planck_noise_fraction * np.random.normal(scale=noise_sigma, size=npix) #units of Kcmb
+        
         tsz_map = tsz_response_vec[i]*ymap #units of K
         cib_map = hp.read_map(f'{inp.cib_map_dir}/mdpl2_len_mag_cibmap_planck_{freq}_uk.fits')
         cib_map = 10**(-6)*hp.ud_grade(cib_map, inp.nside) #units of K

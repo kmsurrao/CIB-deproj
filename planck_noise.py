@@ -60,3 +60,28 @@ def get_planck_noise(inp):
         PS_noise_Planck[i][(np.where(PS_noise_Planck[i] > MAX_NOISE))[0]] = MAX_NOISE
 
     return PS_noise_Planck
+
+
+def planck_MJystr_to_Kcmb(nu):
+    # see Table 6 of https://arxiv.org/pdf/1303.5070.pdf
+    if (nu == 545.0):
+        return 1./58.04
+    elif (nu == 857.0):
+        return 1./2.27
+    else:
+        print("Planck map should already be in Kcmb")
+        
+
+def get_planck_specs():
+    # returns frequencies in GHz, noise in K-arcminute, beam in arcmin
+    frequencies = np.array([100, 143, 217, 353, 545, 857])
+    beam = np.array([9.68, 7.30, 5.02, 4.94, 4.83, 4.64])
+    # see https://arxiv.org/pdf/1502.01587.pdf, Table 6
+    noise100 = 60. * 1.29e-6
+    noise143 = 60. * 0.55e-6
+    noise217 = 60. * 0.78e-6
+    noise353 = 60. * 2.56e-6
+    noise545 = 60. * (0.78 / 1000.) * planck_MJystr_to_Kcmb(545)
+    noise857 = 60. * (0.72 / 1000.) * planck_MJystr_to_Kcmb(857)
+    noise = np.array([noise100, noise143, noise217, noise353, noise545, noise857])
+    return frequencies, noise, beam
