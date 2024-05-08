@@ -138,11 +138,13 @@ def multifrequency_cov(inp, S, N):
     return covar
 
 
-def get_freq_maps(inp):
+def get_freq_maps(inp, diff_noise=False):
     '''
     ARGUMENTS
     ---------
     inp: Info object containing input parameter specifications
+    diff_noise: Bool, whether to use different noise realizations in uninflated
+                and inflated frequency maps
 
     RETURNS
     -------
@@ -162,12 +164,23 @@ def get_freq_maps(inp):
 
         # idx = planck_freqs.index(freq)
         # PS_noise = inp.planck_noise_fraction*PS_noise_Planck[idx]
-        # noise_map = 10**(-6)*hp.synfast(PS_noise, nside=inp.nside) #units of K
+        # noise1_map = 10**(-6)*hp.synfast(PS_noise, nside=inp.nside) #units of K
+        # if not diff_noise:
+        #     noise2_map = noise1_map
+        # else:
+        #     noise2_map = 10**(-6)*hp.synfast(PS_noise, nside=inp.nside) * np.sqrt(2) #units of K
+        #     noise1_map *= np.sqrt(2)
+    
         npix = hp.nside2npix(inp.nside)
         pix_side_arcmin = 60. * (180. / np.pi) * np.sqrt(4. * np.pi / npix)
         noise_level = planck_noise_interp(freq)
         noise_sigma = noise_level / pix_side_arcmin
-        noise_map = inp.planck_noise_fraction * np.random.normal(scale=noise_sigma, size=npix) #units of Kcmb
+        noise1_map = inp.planck_noise_fraction * np.random.normal(scale=noise_sigma, size=npix) #units of Kcmb
+        if not diff_noise:
+            noise2_map = noise1_map
+        else:
+            noise2_map = inp.planck_noise_fraction * np.random.normal(scale=noise_sigma, size=npix) * np.sqrt(2) #units of Kcmb
+            noise1_map *= np.sqrt(2)
         
         tsz_map = tsz_response_vec[i]*ymap #units of K
         cib_map = hp.read_map(f'{inp.cib_map_dir}/mdpl2_len_mag_cibmap_planck_{freq}_uk.fits')
@@ -178,8 +191,8 @@ def get_freq_maps(inp):
             additional_maps += 10**(-6)*hp.ud_grade(hp.read_map(inp.ksz_map_file), inp.nside)
         if 'CMB' in inp.components:
             additional_maps += 10**(-6)*hp.ud_grade(hp.read_map(inp.cmb_map_file), inp.nside)
-        freq_map_uninflated = tsz_map + inp.cib_inflation[0]*cib_map + noise_map + additional_maps
-        freq_map_inflated = tsz_map + inp.cib_inflation[1]*cib_map + noise_map + additional_maps
+        freq_map_uninflated = tsz_map + inp.cib_inflation[0]*cib_map + noise1_map + additional_maps
+        freq_map_inflated = tsz_map + inp.cib_inflation[1]*cib_map + noise2_map + additional_maps
         hp.write_map(f'{inp.output_dir}/maps/uninflated_{freq}.fits', freq_map_uninflated, overwrite=True, dtype=np.float32)
         hp.write_map(f'{inp.output_dir}/maps/inflated_{freq}.fits', freq_map_inflated, overwrite=True, dtype=np.float32)
         if inp.debug:

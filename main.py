@@ -34,7 +34,7 @@ def main():
         h, ra_halos, dec_halos = halodir2map(inp)
     print('got ra and dec of halos', flush=True)
     print('Getting maps at different frequencies...', flush=True)
-    get_freq_maps(inp)
+    get_freq_maps(inp, diff_noise=True)
 
 
     # Build y-maps with pyilc
@@ -56,7 +56,7 @@ def main():
 
 
     # Compute chi2 values
-    print('Computing chi2 values...', flush=True)                                                                                                     
+    print('Computing chi2 values...', flush=True)
     pool = mp.Pool(inp.num_parallel)
     inputs = [(inp, beta, ra_halos, dec_halos, h) for beta in beta_arr]
     results = list(tqdm.tqdm(pool.imap(compare_chi2_star, inputs), total=len(beta_arr)))

@@ -80,7 +80,7 @@ halo_catalog: '/scratch/09334/ksurrao/halo_files/haloslc_agora_zsel_0_to_0.3_Mse
 pyilc_path: '/work2/09334/ksurrao/stampede3/Github/pyilc'
 
 # directory in which to save outputs
-output_dir: '/scratch/09334/ksurrao/cib_beta_new_noise'
+output_dir: '/scratch/09334/ksurrao/cib_beta_new_diff_noise'
 
 # If debug is True, there will be more intermediate printing
 debug: False
