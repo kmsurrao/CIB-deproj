@@ -92,8 +92,9 @@ def setup_pyilc(inp, env, beta, suppress_printing=False, inflated=False, standar
 
 
     #run pyilc and return y-map
-    stdout = subprocess.DEVNULL if suppress_printing else None
-    subprocess.run([f"python {inp.pyilc_path}/pyilc/main.py {ymap_yaml}"], shell=True, env=env, stdout=stdout, stderr=stdout)
+    stdout = subprocess.DEVNULL
+    stderr = subprocess.DEVNULL if suppress_printing else None
+    subprocess.run([f"python {inp.pyilc_path}/pyilc/main.py {ymap_yaml}"], shell=True, env=env, stdout=stdout, stderr=stderr)
     if inp.debug:
         print(f'generated ILC maps for beta={beta:.2f}, inflated={inflated}', flush=True)
     inflated_str = 'inflated' if inflated else 'uninflated'

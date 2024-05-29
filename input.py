@@ -60,6 +60,8 @@ class Info(object):
         self.cib_inflation = p['cib_inflation']
         self.planck_noise_fraction = p['planck_noise_fraction']
         assert 0 < self.planck_noise_fraction, "planck_noise_fraction must be greater than 0"
+        self.planck_beam_fraction = p['planck_beam_fraction']
+        assert 0 < self.planck_beam_fraction, "planck_beam_fraction must be greater than 0"
         self.harmonic_space = p['harmonic_space']
         
         self.cib_map_dir = p['cib_map_dir']
