@@ -191,7 +191,7 @@ def get_freq_maps(inp, diff_noise=False):
         
         elif inp.noise_type == 'SO':
             so_freqs = np.array([27, 39, 93, 145, 225, 280])
-            nearest = np.find_nearest(so_freqs, freq)
+            nearest = so_freqs[(np.abs(so_freqs - freq)).argmin()]
             noise_file = open(f'so_noise/noise_{nearest}GHz.txt', 'r')
             rows = noise_file.readlines()
             for i, line in enumerate(rows):
@@ -199,7 +199,7 @@ def get_freq_maps(inp, diff_noise=False):
             rows = np.asarray(rows, dtype=np.float32)
             ells_noise, noise_ps = rows
             f = interpolate.interp1d(ells_noise, noise_ps, fill_value="extrapolate", kind='cubic')
-            noise_ps_interp = inp.noise_fraction*f(ells_noise)
+            noise_ps_interp = inp.noise_fraction*f(np.arange(inp.ellmax+1))
             noise1_map = 10**(-6)*hp.synfast(noise_ps_interp, nside=inp.nside) #units of K
             if not diff_noise:
                 noise2_map = noise1_map
