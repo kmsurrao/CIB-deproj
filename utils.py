@@ -150,10 +150,14 @@ def get_freq_maps(inp, diff_noise=False):
     -------
     None (writes frequency maps to output_dir)
     '''
-    # PS_noise_Planck = get_planck_noise(inp)
-    # planck_freqs = [30, 44, 70, 100, 143, 217, 353, 545]
-    planck_freq, planck_noise, planck_beam = get_planck_specs()
-    planck_noise_interp = interpolate.interp1d(planck_freq, planck_noise)
+
+    if inp.noise_type == 'Planck_no_beam':
+        PS_noise_Planck = get_planck_noise(inp)
+        planck_freqs = [30, 44, 70, 100, 143, 217, 353, 545]
+    
+    elif inp.noise_type == 'Planck_with_beam':
+        planck_freq, planck_noise, planck_beam = get_planck_specs()
+        planck_noise_interp = interpolate.interp1d(planck_freq, planck_noise)
 
     tsz_response_vec = tsz_spectral_response(inp.frequencies)
     ymap = hp.read_map(inp.tsz_map_file)
@@ -162,26 +166,47 @@ def get_freq_maps(inp, diff_noise=False):
 
     for i, freq in enumerate(inp.frequencies):
 
-        # idx = planck_freqs.index(freq)
-        # PS_noise = inp.planck_noise_fraction*PS_noise_Planck[idx]
-        # noise1_map = 10**(-6)*hp.synfast(PS_noise, nside=inp.nside) #units of K
-        # if not diff_noise:
-        #     noise2_map = noise1_map
-        # else:
-        #     noise2_map = 10**(-6)*hp.synfast(PS_noise, nside=inp.nside) * np.sqrt(2) #units of K
-        #     noise1_map *= np.sqrt(2)
-    
-        npix = hp.nside2npix(inp.nside)
-        pix_side_arcmin = 60. * (180. / np.pi) * np.sqrt(4. * np.pi / npix)
-        noise_level = planck_noise_interp(freq)
-        noise_sigma = noise_level / pix_side_arcmin
-        noise1_map = inp.planck_noise_fraction * np.random.normal(scale=noise_sigma, size=npix) #units of Kcmb
-        if not diff_noise:
-            noise2_map = noise1_map
-        else:
-            noise2_map = inp.planck_noise_fraction * np.random.normal(scale=noise_sigma, size=npix) * np.sqrt(2) #units of Kcmb
-            noise1_map *= np.sqrt(2)
+
+        if inp.noise_type == 'Planck_no_beam':
+            idx = planck_freqs.index(freq)
+            PS_noise = inp.noise_fraction*PS_noise_Planck[idx]
+            noise1_map = 10**(-6)*hp.synfast(PS_noise, nside=inp.nside) #units of K
+            if not diff_noise:
+                noise2_map = noise1_map
+            else:
+                noise2_map = 10**(-6)*hp.synfast(PS_noise, nside=inp.nside) * np.sqrt(2) #units of K
+                noise1_map *= np.sqrt(2)
+
+        elif inp.noise_type == 'Planck_with_beam':
+            npix = hp.nside2npix(inp.nside)
+            pix_side_arcmin = 60. * (180. / np.pi) * np.sqrt(4. * np.pi / npix)
+            noise_level = planck_noise_interp(freq)
+            noise_sigma = noise_level / pix_side_arcmin
+            noise1_map = inp.noise_fraction * np.random.normal(scale=noise_sigma, size=npix) #units of Kcmb
+            if not diff_noise:
+                noise2_map = noise1_map
+            else:
+                noise2_map = inp.noise_fraction * np.random.normal(scale=noise_sigma, size=npix) * np.sqrt(2) #units of Kcmb
+                noise1_map *= np.sqrt(2)
         
+        elif inp.noise_type == 'SO':
+            so_freqs = np.array([27, 39, 93, 145, 225, 280])
+            nearest = np.find_nearest(so_freqs, freq)
+            noise_file = open(f'so_noise/noise_{nearest}GHz.txt', 'r')
+            rows = noise_file.readlines()
+            for i, line in enumerate(rows):
+                rows[i] = line.lstrip(' ').replace('\n', '').split()
+            rows = np.asarray(rows, dtype=np.float32)
+            ells_noise, noise_ps = rows
+            f = interpolate.interp1d(ells_noise, noise_ps, fill_value="extrapolate", kind='cubic')
+            noise_ps_interp = inp.noise_fraction*f(ells_noise)
+            noise1_map = 10**(-6)*hp.synfast(noise_ps_interp, nside=inp.nside) #units of K
+            if not diff_noise:
+                noise2_map = noise1_map
+            else:
+                noise2_map = 10**(-6)*hp.synfast(noise_ps_interp, nside=inp.nside) * np.sqrt(2) #units of K
+                noise1_map *= np.sqrt(2)
+            
         tsz_map = tsz_response_vec[i]*ymap #units of K
         cib_map = hp.read_map(f'{inp.cib_map_dir}/mdpl2_len_mag_cibmap_planck_{freq}_uk.fits')
         cib_map = 10**(-6)*hp.ud_grade(cib_map, inp.nside) #units of K

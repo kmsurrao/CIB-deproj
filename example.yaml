@@ -39,11 +39,18 @@ num_parallel: 20
 # factors by which to inflate CIB and deproject for comparison
 cib_inflation: [1.0, 10.0]
 
-# fraction of Planck noise power spectrum to use in the production of frequency maps 
-planck_noise_fraction: 0.1
+# type of noise to use (currently only supports 'Planck_no_beam', 'Planck_with_beam' or 'SO')
+noise_type: 'SO'
 
-# fraction of Planck beam to use
-planck_beam_fraction: 0.1
+# fraction of noise power spectrum from the chosen experiment (noise_type) to
+# use in the simulation of frequency maps 
+noise_fraction: 0.1
+
+# fraction of noise beam from the chosen experiment (noise_type) to use in the 
+# simulation of frequency maps
+# Only applied if noise_type is 'Planck_no_beam' or 'Planck_with_beam'. 
+# If noise_type is 'SO', beam_fraction is ignored if provided.
+beam_fraction: 0.1
 
 # whether to compute Gaussian covariance in harmonic space or 
 # use real space correlations with treecorr

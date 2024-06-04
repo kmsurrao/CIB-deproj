@@ -58,10 +58,19 @@ class Info(object):
         else:
             self.num_parallel = 1
         self.cib_inflation = p['cib_inflation']
-        self.planck_noise_fraction = p['planck_noise_fraction']
-        assert 0 < self.planck_noise_fraction, "planck_noise_fraction must be greater than 0"
-        self.planck_beam_fraction = p['planck_beam_fraction']
-        assert 0 < self.planck_beam_fraction, "planck_beam_fraction must be greater than 0"
+        self.noise_type = p['noise_type']
+        assert self.noise_type in {'Plank_no_beam', 'Planck_with_beam', 'SO'}, "Currently the only supported noise types are 'Planck_no_beam', 'Planck_with_beam', and 'SO'"
+        if 'noise_fraction' in p:
+            self.noise_fraction = p['noise_fraction']
+            assert 0 < self.noise_fraction, "noise_fraction must be greater than 0"
+        else:
+            self.noise_fraction = 1.
+        if self.noise_type in {'Plank_no_beam', 'Planck_with_beam'}:
+            if 'beam_fraction' in p:
+                self.beam_fraction = p['beam_fraction']
+                assert 0 < self.beam_fraction, "beam_fraction must be greater than 0"
+            else:
+                self.beam_fraction = 1.
         self.harmonic_space = p['harmonic_space']
         
         self.cib_map_dir = p['cib_map_dir']
