@@ -3,6 +3,10 @@ from tqdm import tqdm
 import numpy as np
 import pickle
 import h5py
+import os
+import argparse
+from input import Info
+from utils import setup_output_dir
 
 def halodir2map(inp, save_single_catalog=True):
     '''
@@ -30,7 +34,7 @@ def halodir2map(inp, save_single_catalog=True):
     rot_all = np.arange(1,30)
     for rot in tqdm(rot_all):
         try:
-            df = np.load(halo_ldir+'haloslc_rot_'+str(rot)+'.npy', allow_pickle=True)
+            df = np.load(halo_ldir+'/haloslc_rot_'+str(rot)+'_v050223.npy', allow_pickle=True)
             z_all = df[:,2]
             ra, dec = df[:,0], df[:,1]
             mvir = df[:,5]
@@ -38,7 +42,7 @@ def halodir2map(inp, save_single_catalog=True):
             halo_dec_all.append(dec)
             halo_z_all.append(z_all)
             halo_m_all.append(mvir)        
-        except:
+        except Exception:
                 pass
     halo_ra_all = np.concatenate(halo_ra_all)
     halo_dec_all = np.concatenate(halo_dec_all)
@@ -46,8 +50,10 @@ def halodir2map(inp, save_single_catalog=True):
     halo_m_all = np.concatenate(halo_m_all)
 
     #you can change the selection to have more or less halos to boost the SNR of correlations.
-    indsel_z = np.where((halo_z_all > 0.0) & (halo_z_all < 0.25))[0]
-    indsel_M = np.where((halo_m_all > 1e13) & (halo_m_all < 1e15))[0]
+    z_min, z_max = 0, 1.5
+    M_min, M_max = 1e13, 1e15
+    indsel_z = np.where((halo_z_all > z_min) & (halo_z_all < z_max))[0]
+    indsel_M = np.where((halo_m_all > M_min) & (halo_m_all < M_max))[0]
     indsel_all = np.intersect1d(indsel_z, indsel_M)
 
     ra_halos = halo_ra_all[indsel_all]
@@ -69,7 +75,7 @@ def halodir2map(inp, save_single_catalog=True):
     hp.write_map(f'{inp.output_dir}/maps/halo.fits', density, overwrite=True, dtype=np.float32)
 
     if save_single_catalog:
-        hf = h5py.File('haloslc_agora_zsel_0_to_0.3_Msel_1e13_to_1e15.h5', 'w')
+        hf = h5py.File(f'{inp.halo_files_dir}/haloslc_agora_zsel_{z_min}_to_{z_max}_Msel_{M_min}_to_{M_max}.h5', 'w')
         hf.create_dataset('ra', data=ra_halos)
         hf.create_dataset('dec', data=dec_halos)
         hf.create_dataset('z', data=z_halos)
@@ -131,3 +137,21 @@ def halofile2map(inp):
     hp.write_map(f'{inp.output_dir}/maps/halo.fits', density, overwrite=True, dtype=np.float32)
 
     return density, ra_halos, dec_halos
+
+if __name__ == '__main__':
+
+    # main input file containing most specifications 
+    parser = argparse.ArgumentParser(description="Construct halo map.")
+    parser.add_argument("--config", default="example.yaml")
+    args = parser.parse_args()
+    input_file = args.config
+
+    # read in the input file and set up relevant info object
+    inp = Info(input_file)
+
+    # set up output directory
+    env = os.environ.copy()
+    setup_output_dir(inp, env)
+
+    # create single halo catalog and map
+    halodir2map(inp, save_single_catalog=True)
