@@ -59,13 +59,13 @@ class Info(object):
             self.num_parallel = 1
         self.cib_inflation = p['cib_inflation']
         self.noise_type = p['noise_type']
-        assert self.noise_type in {'Plank_no_beam', 'Planck_with_beam', 'SO'}, "Currently the only supported noise types are 'Planck_no_beam', 'Planck_with_beam', and 'SO'"
+        assert self.noise_type in {'Planck_no_beam', 'Planck_with_beam', 'SO'}, "Currently the only supported noise types are 'Planck_no_beam', 'Planck_with_beam', and 'SO'"
         if 'noise_fraction' in p:
             self.noise_fraction = p['noise_fraction']
             assert 0 < self.noise_fraction, "noise_fraction must be greater than 0"
         else:
             self.noise_fraction = 1.
-        if self.noise_type in {'Plank_no_beam', 'Planck_with_beam'}:
+        if self.noise_type in {'Planck_no_beam', 'Planck_with_beam'}:
             if 'beam_fraction' in p:
                 self.beam_fraction = p['beam_fraction']
                 assert 0 < self.beam_fraction, "beam_fraction must be greater than 0"
@@ -108,6 +108,8 @@ class Info(object):
                 f"missing file {self.cib_map_dir}/mdpl2_len_mag_cibmap_planck_{freq}_uk.fits"
         assert set(self.frequencies).issubset({30,44,70,100,143,217,353,545}), \
             "self.frequencies must be subset of {30,44,70,100,143,217,353,545}"
+
+        self.cib_decorr = p['cib_decorr']
 
         self.output_dir = p['output_dir']
         assert type(self.output_dir) is str, "TypeError: output_dir must be str"
