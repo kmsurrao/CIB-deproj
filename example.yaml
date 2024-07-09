@@ -1,3 +1,8 @@
+
+# Whether to use realistic data-based pipeline (amplifying residual to inflate CIB)
+# or to use simple pipeline with alpha * (agora CIB map)
+realistic: True
+
 # nside resolution parameter of maps
 nside: 1024
 
@@ -89,7 +94,7 @@ halo_files_dir: '/scratch/09334/ksurrao/halo_files'
 # file containing single halo catalog
 # must either provide halo_catalog or a directory of halo files in halo_files_dir
 # if this input is provided, halo_files_dir will be ignored
-halo_catalog: '/scratch/09334/ksurrao/halo_files/haloslc_agora_zsel_0_to_2.0_Msel_1e12_to_1e15.h5'
+halo_catalog: '/scratch/09334/ksurrao/halo_files/haloslc_agora_zsel_0.8_to_1.8_Msel_1e12_to_1e15_rot120.h5'
 
 # path to pyilc repository
 pyilc_path: '/work2/09334/ksurrao/stampede3/Github/pyilc'

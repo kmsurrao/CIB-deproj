@@ -19,6 +19,8 @@ class Info(object):
         self.input_file = input_file
         p = read_dict_from_yaml(self.input_file)
 
+        self.realistic = p['realistic']
+
         self.nside = p['nside']
         assert type(self.nside) is int and (self.nside & (self.nside-1) == 0) and self.nside != 0, "nside must be integer power of 2"
         self.ellmax = p['ellmax']

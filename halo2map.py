@@ -115,8 +115,8 @@ def halofile2map(inp):
     # halo_m_all = pickle.load(open(f'{inp.output_dir}/halo_m_all.p', 'rb'))      
 
     #you can change the selection to have more or less halos to boost the SNR of correlations.
-    indsel_z = np.where((halo_z_all > 0.0) & (halo_z_all < 0.25))[0]
-    indsel_M = np.where((halo_m_all > 1e13) & (halo_m_all < 1e15))[0]
+    indsel_z = np.where((halo_z_all > 0.8) & (halo_z_all < 1.8))[0]
+    indsel_M = np.where((halo_m_all > 1e12) & (halo_m_all < 1e15))[0]
     indsel_all = np.intersect1d(indsel_z, indsel_M)
 
     ra_halos = halo_ra_all[indsel_all]

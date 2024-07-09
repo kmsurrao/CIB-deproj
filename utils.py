@@ -55,15 +55,19 @@ def setup_output_dir(inp, env, standard_ilc=False):
         subprocess.call(f'mkdir {inp.output_dir}/pyilc_yaml_files', shell=True, env=env)
     if not os.path.isdir(f'{inp.output_dir}/pyilc_outputs'):
         subprocess.call(f'mkdir {inp.output_dir}/pyilc_outputs', shell=True, env=env)
+    if inp.realistic:
+        inflation_strs = ['inflated_realistic', 'uninflated']
+    else:
+        inflation_strs = ['inflated', 'uninflated']
     if not standard_ilc:
         beta_arr = np.linspace(inp.beta_range[0], inp.beta_range[1], num=inp.num_beta_vals)
         write_beta_yamls(inp)
         for beta in beta_arr:
-            for i in ['inflated', 'uninflated']:
+            for i in inflation_strs:
                 if not os.path.isdir(f'{inp.output_dir}/pyilc_outputs/beta_{beta:.2f}_{i}'):
                     subprocess.call(f'mkdir {inp.output_dir}/pyilc_outputs/beta_{beta:.2f}_{i}', shell=True, env=env)
     else:
-        for i in ['inflated', 'uninflated']:
+        for i in inflation_strs:
             if not os.path.isdir(f'{inp.output_dir}/pyilc_outputs/{i}'):
                 subprocess.call(f'mkdir {inp.output_dir}/pyilc_outputs/{i}', shell=True, env=env)
 
@@ -230,7 +234,7 @@ def get_freq_maps(inp, diff_noise=False):
             if not diff_noise:
                 noise2_map = noise1_map
             else:
-                noise2_map = inp.noise_fraction * np.random.normal(scale=noise_sigma, size=npix) * np.sqrt(2) #units of Kcmb
+                noise2_map = np.sqrt(inp.noise_fraction) * np.random.normal(scale=noise_sigma, size=npix) * np.sqrt(2) #units of Kcmb
                 noise1_map *= np.sqrt(2)
         
         elif inp.noise_type == 'SO':
@@ -255,7 +259,7 @@ def get_freq_maps(inp, diff_noise=False):
         if inp.cib_decorr:
             cib_map = hp.read_map(f'{inp.cib_map_dir}/mdpl2_len_mag_cibmap_planck_{freq}_uk.fits')
         else:
-            cib_353 = hp.read_map(f'{inp.cib_map_dir}/mdpl2_len_mag_cibmap_planck_{freq}_uk.fits')
+            cib_353 = hp.read_map(f'{inp.cib_map_dir}/mdpl2_len_mag_cibmap_planck_353_uk.fits')
             cib_map = cib_353/cib_spectral_response([353])[0]*cib_spectral_response([freq])[0]
         cib_map = 10**(-6)*hp.ud_grade(cib_map, inp.nside) #units of K
         cib_map = initial_masking(inp, cib_map, cib_map_143)
@@ -265,11 +269,37 @@ def get_freq_maps(inp, diff_noise=False):
         if 'CMB' in inp.components:
             additional_maps += 10**(-6)*hp.ud_grade(hp.read_map(inp.cmb_map_file), inp.nside)
         freq_map_uninflated = tsz_map + inp.cib_inflation[0]*cib_map + noise1_map + additional_maps
-        freq_map_inflated = tsz_map + inp.cib_inflation[1]*cib_map + noise2_map + additional_maps
         hp.write_map(f'{inp.output_dir}/maps/uninflated_{freq}.fits', freq_map_uninflated, overwrite=True, dtype=np.float32)
-        hp.write_map(f'{inp.output_dir}/maps/inflated_{freq}.fits', freq_map_inflated, overwrite=True, dtype=np.float32)
         if inp.debug:
             print(f'saved {inp.output_dir}/maps/uninflated_{freq}.fits', flush=True)
-            print(f'saved {inp.output_dir}/maps/inflated_{freq}.fits', flush=True)
+        if not inp.realistic:
+            freq_map_inflated = tsz_map + inp.cib_inflation[1]*cib_map + noise2_map + additional_maps
+            hp.write_map(f'{inp.output_dir}/maps/inflated_{freq}.fits', freq_map_inflated, overwrite=True, dtype=np.float32)
+            if inp.debug:
+                print(f'saved {inp.output_dir}/maps/inflated_{freq}.fits', flush=True)
     return
 
+
+def get_realistic_infl_maps(inp, beta):
+    '''
+    Run this function to get realistic inflated CIB maps using
+    residual (full frequency maps - y map with some deprojected beta)
+
+    ARGUMENTS
+    ---------
+    inp: Info object containing input parameter specifications
+    beta: int, beta value used to build original y-map to subtract for residual
+
+    RETURNS
+    -------
+    None (writes frequency maps to output_dir)
+    '''
+    ymap = hp.read_map(f"{inp.output_dir}/pyilc_outputs/beta_{beta:.2f}_uninflated/needletILCmap_component_tSZ_deproject_CIB.fits")
+    for i, freq in enumerate(inp.frequencies):
+        orig_freq_map = hp.read_map(f'{inp.output_dir}/maps/uninflated_{freq}.fits')
+        residual = orig_freq_map - ymap
+        infl_map = orig_freq_map + inp.cib_inflation[1]*residual
+        hp.write_map(f'{inp.output_dir}/maps/inflated_realistic_{freq}_{beta:.2f}.fits', infl_map, overwrite=True, dtype=np.float32)
+        if inp.debug:
+            print(f'saved {inp.output_dir}/maps/inflated_realistic_{freq}_{beta:.2f}.fits', flush=True)
+    return

@@ -133,7 +133,8 @@ def cov(inp, beta, ra_halos, dec_halos, h, inflated=False):
     '''
     y1 = hp.read_map(f"{inp.output_dir}/pyilc_outputs/beta_{beta:.2f}_uninflated/needletILCmap_component_tSZ_deproject_CIB.fits")
     if inflated:
-        y2 = hp.read_map(f"{inp.output_dir}/pyilc_outputs/beta_{beta:.2f}_inflated/needletILCmap_component_tSZ_deproject_CIB.fits")
+        infl_str = 'inflated_realistic' if inp.realistic else 'inflated'
+        y2 = hp.read_map(f"{inp.output_dir}/pyilc_outputs/beta_{beta:.2f}_{infl_str}/needletILCmap_component_tSZ_deproject_CIB.fits")
     else:
         y2 = hp.read_map(inp.tsz_map_file)
         y2 = hp.ud_grade(y2, inp.nside)
@@ -249,7 +250,8 @@ def compare_chi2(inp, beta, ra_halos, dec_halos, h):
     y_true = hp.read_map(inp.tsz_map_file)
     y_true = hp.ud_grade(y_true, inp.nside)
     y_recon = hp.read_map(f"{inp.output_dir}/pyilc_outputs/beta_{beta:.2f}_uninflated/needletILCmap_component_tSZ_deproject_CIB.fits")
-    y_recon_inflated = hp.read_map(f"{inp.output_dir}/pyilc_outputs/beta_{beta:.2f}_inflated/needletILCmap_component_tSZ_deproject_CIB.fits")
+    infl_str = 'inflated_realistic' if inp.realistic else 'inflated'
+    y_recon_inflated = hp.read_map(f"{inp.output_dir}/pyilc_outputs/beta_{beta:.2f}_{infl_str}/needletILCmap_component_tSZ_deproject_CIB.fits")
     
     if inp.harmonic_space:
         chi2_true, hy_true = compute_chi2_harmonic_space(inp, y_recon, y_true, h, inp.cov_hytrue)

@@ -2,6 +2,7 @@ import subprocess
 import yaml
 import healpy as hp
 import os
+from utils import get_realistic_infl_maps
 
 
 def setup_pyilc(inp, env, beta, suppress_printing=False, inflated=False, standard_ilc=False):
@@ -25,16 +26,13 @@ def setup_pyilc(inp, env, beta, suppress_printing=False, inflated=False, standar
     #set up yaml files for pyilc
     
     pyilc_input_params = {}
+    inflated_str = 'inflated' if inflated else 'uninflated'
+    if inp.realistic and inflated:
+        inflated_str += '_realistic'
     if not standard_ilc:
-        if inflated:
-            pyilc_input_params['output_dir'] = str(inp.output_dir) + f"/pyilc_outputs/beta_{beta:.2f}_inflated/"
-        else:
-            pyilc_input_params['output_dir'] = str(inp.output_dir) + f"/pyilc_outputs/beta_{beta:.2f}_uninflated/"
+        pyilc_input_params['output_dir'] = str(inp.output_dir) + f"/pyilc_outputs/beta_{beta:.2f}_{inflated_str}/"
     else:
-        if inflated:
-            pyilc_input_params['output_dir'] = str(inp.output_dir) + f"/pyilc_outputs/inflated/"
-        else:
-            pyilc_input_params['output_dir'] = str(inp.output_dir) + f"/pyilc_outputs/uninflated/"
+        pyilc_input_params['output_dir'] = str(inp.output_dir) + f"/pyilc_outputs/{inflated_str}/"
 
     pyilc_input_params['output_prefix'] = ""
     pyilc_input_params['save_weights'] = "no"
@@ -58,12 +56,12 @@ def setup_pyilc(inp, env, beta, suppress_printing=False, inflated=False, standar
     # the files where you have saved the bandpasses:
     pyilc_input_params['freq_bp_files'] = [f'{inp.pyilc_path}/data/HFI_BANDPASS_F{int(freq)}_reformat.txt' for freq in inp.frequencies]
 
-    if inflated:
+    if inflated and inp.realistic:
         pyilc_input_params['freq_map_files'] = \
-            [f'{inp.output_dir}/maps/inflated_{freq}.fits' for freq in inp.frequencies]
+            [f'{inp.output_dir}/maps/{inflated_str}_{freq}_{beta:.2f}.fits' for freq in inp.frequencies]
     else:
         pyilc_input_params['freq_map_files'] = \
-            [f'{inp.output_dir}/maps/uninflated_{freq}.fits' for freq in inp.frequencies]
+            [f'{inp.output_dir}/maps/{inflated_str}_{freq}.fits' for freq in inp.frequencies]
 
     pyilc_input_params['beam_type'] = 'Gaussians'
     pyilc_input_params['beam_FWHM_arcmin'] = [0.1]*len(inp.frequencies)
@@ -97,7 +95,6 @@ def setup_pyilc(inp, env, beta, suppress_printing=False, inflated=False, standar
     subprocess.run([f"python {inp.pyilc_path}/pyilc/main.py {ymap_yaml}"], shell=True, env=env, stdout=stdout, stderr=stderr)
     if inp.debug:
         print(f'generated ILC maps for beta={beta:.2f}, inflated={inflated}', flush=True)
-    inflated_str = 'inflated' if inflated else 'uninflated'
     beta_str = f'beta_{beta:.2f}_' if not standard_ilc else ''
     deproj_str = '_deproject_CIB' if not standard_ilc else ''
     ymap = hp.read_map(f"{inp.output_dir}/pyilc_outputs/{beta_str}{inflated_str}/needletILCmap_component_tSZ{deproj_str}.fits")
@@ -120,10 +117,13 @@ def get_all_ymaps(inp, env, beta):
 
     '''
     y_recon_file = f"{inp.output_dir}/pyilc_outputs/beta_{beta:.2f}_uninflated/needletILCmap_component_tSZ_deproject_CIB.fits"
-    y_recon_infl_file = f"{inp.output_dir}/pyilc_outputs/beta_{beta:.2f}_inflated/needletILCmap_component_tSZ_deproject_CIB.fits"
     if not os.path.isfile(y_recon_file):
         setup_pyilc(inp, env, beta, inflated=False, suppress_printing=(not inp.debug))
+    infl_str = 'inflated_realistic' if inp.realistic else 'inflated'
+    y_recon_infl_file = f"{inp.output_dir}/pyilc_outputs/beta_{beta:.2f}_{infl_str}/needletILCmap_component_tSZ_deproject_CIB.fits"
     if not os.path.isfile(y_recon_infl_file):
+        if inp.realistic:
+            get_realistic_infl_maps(inp, beta)
         setup_pyilc(inp, env, beta, inflated=True, suppress_printing=(not inp.debug))
     return 1
 
