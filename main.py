@@ -8,7 +8,8 @@ import matplotlib.pyplot as plt
 from input import Info
 from halo2map import halodir2map, halofile2map
 from cross_corr import cov, compare_chi2_star
-from get_y_map import get_all_ymaps_star
+from get_y_map import get_all_ymaps_star, setup_pyilc
+from generate_maps import get_freq_maps
 from utils import *
 
 
@@ -34,11 +35,18 @@ def main():
         h, ra_halos, dec_halos = halodir2map(inp)
     print('got ra and dec of halos', flush=True)
     print('Getting maps at different frequencies...', flush=True)
-    get_freq_maps(inp, diff_noise=True)
+    get_freq_maps(inp, diff_noise=False, no_cib=False)
 
 
-    # Build y-maps with pyilc
-    print('Building y-maps...')
+    # Build standard ILC y-map (from maps with no CIB)
+    print('Building standard ILC y-map from freq. maps without CIB...', flush=True)
+    get_freq_maps(inp, diff_noise=False, no_cib=True)
+    setup_pyilc(inp, env, 1.0, suppress_printing=True, inflated=False, \
+                standard_ilc=True, no_cib=True)
+
+
+    # Build y-maps with pyilc (deprojecting beta)
+    print('Building y-maps...', flush=True)
     beta_arr = np.linspace(inp.beta_range[0], inp.beta_range[1], num=inp.num_beta_vals) 
     pool = mp.Pool(inp.num_parallel)
     inputs = [(inp, env, beta) for beta in beta_arr]

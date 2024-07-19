@@ -49,8 +49,10 @@ def halodir2map(inp, save_single_catalog=True):
     halo_m_all = np.concatenate(halo_m_all, dtype=np.float32)
 
     #you can change the selection to have more or less halos to boost the SNR of correlations.
-    z_min, z_max = 0.8, 1.8
-    M_min, M_max = 1e12, 1e15
+    # z_min, z_max = 0.8, 1.8
+    # M_min, M_max = 1e12, 1e15
+    z_min, z_max = 0.3, 0.8
+    M_min, M_max = 5e12, 5e14
     indsel_z = np.where((halo_z_all > z_min) & (halo_z_all < z_max))[0]
     indsel_M = np.where((halo_m_all > M_min) & (halo_m_all < M_max))[0]
     indsel_all = np.intersect1d(indsel_z, indsel_M)
@@ -115,8 +117,12 @@ def halofile2map(inp):
     # halo_m_all = pickle.load(open(f'{inp.output_dir}/halo_m_all.p', 'rb'))      
 
     #you can change the selection to have more or less halos to boost the SNR of correlations.
-    indsel_z = np.where((halo_z_all > 0.8) & (halo_z_all < 1.8))[0]
-    indsel_M = np.where((halo_m_all > 1e12) & (halo_m_all < 1e15))[0]
+    # z_min, z_max = 0.8, 1.8
+    # M_min, M_max = 1e12, 1e15
+    z_min, z_max = 0.3, 0.8
+    M_min, M_max = 5e12, 5e14
+    indsel_z = np.where((halo_z_all > z_min) & (halo_z_all < z_max))[0]
+    indsel_M = np.where((halo_m_all > M_min) & (halo_m_all < M_max))[0]
     indsel_all = np.intersect1d(indsel_z, indsel_M)
 
     ra_halos = halo_ra_all[indsel_all]

@@ -32,6 +32,10 @@ class Info(object):
             assert type(self.ells_per_bin) is int and 1 <= self.ells_per_bin <= self.ellmax-2, "ells_per_bin must be int with 1 <= ells_per_bin <= ellmax-2"
         else:
             self.ells_per_bin = 1
+        if 'ellmin' in p:
+            self.ellmin = p['ellmin']
+        else:
+            self.ellmin = 0
 
         self.frequencies = p['frequencies']
         assert len(self.frequencies) >= 2, "ILC requires at least two frequency channels"

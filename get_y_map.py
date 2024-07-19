@@ -2,10 +2,10 @@ import subprocess
 import yaml
 import healpy as hp
 import os
-from utils import get_realistic_infl_maps
+from generate_maps import get_realistic_infl_maps
 
 
-def setup_pyilc(inp, env, beta, suppress_printing=False, inflated=False, standard_ilc=False):
+def setup_pyilc(inp, env, beta, suppress_printing=False, inflated=False, standard_ilc=False, no_cib=False):
     '''
     Sets up yaml files for pyilc and runs the code
 
@@ -17,6 +17,7 @@ def setup_pyilc(inp, env, beta, suppress_printing=False, inflated=False, standar
     suppress_printing: Bool, whether to suppress outputs and errors from pyilc code itself
     inflated: Bool, whether or not to use inflated CIB frequency maps
     standard_ilc: Bool, whether to use a standard ILC without CIB deprojection
+    no_cib: Bool, if True, use maps without CIB included
 
     RETURNS
     -------
@@ -56,7 +57,10 @@ def setup_pyilc(inp, env, beta, suppress_printing=False, inflated=False, standar
     # the files where you have saved the bandpasses:
     pyilc_input_params['freq_bp_files'] = [f'{inp.pyilc_path}/data/HFI_BANDPASS_F{int(freq)}_reformat.txt' for freq in inp.frequencies]
 
-    if inflated and inp.realistic:
+    if no_cib:
+        pyilc_input_params['freq_map_files'] = \
+            [f'{inp.output_dir}/maps/no_cib_{freq}.fits' for freq in inp.frequencies]
+    elif inflated and inp.realistic:
         pyilc_input_params['freq_map_files'] = \
             [f'{inp.output_dir}/maps/{inflated_str}_{freq}_{beta:.2f}.fits' for freq in inp.frequencies]
     else:

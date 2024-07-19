@@ -4,10 +4,13 @@
 realistic: True
 
 # nside resolution parameter of maps
-nside: 1024
+nside: 1024 
 
-# maximum ell for which to compute chi^2 and perform harmonic ILC
+# maximum ell for which to compute chi^2 and perform ILC
 ellmax: 2000
+
+# minimum ell for which to include power in maps
+ellmin: 0
 
 # If ILC_type is 'harmonic', this is the number of multipoles per bin 
 # to use in the harmonic ILC calculation 
@@ -21,7 +24,7 @@ frequencies: [100, 143, 217, 353, 545]
 
 # Components to include in the frequency maps. At minimum, this list must include
 # 'tSZ' and 'CIB'. Other options are 'CMB' and 'kSZ'.
-components: ['tSZ', 'CIB']
+components: ['tSZ', 'CIB', 'CMB', 'kSZ']
 
 # ILC type (either 'harmonic' or 'needlet')
 ILC_type: 'needlet'
@@ -29,38 +32,38 @@ ILC_type: 'needlet'
 # If ILC_type is 'needlet', array of FWHM (arcmin) used for constrution 
 # of Gaussians. (needlet filters are differences of two Gaussians). 
 # FWHM need to be in strictly decreasing order.
-GN_FWHM_arcmin: [30., 15., 7., 3.] 
+GN_FWHM_arcmin: [30, 15, 7, 3] 
 
 # whether there's decorrelation across frequencies for the CIB maps
 # If False, assumes a fixed CIB SED with beta=1.45 and builds all CIB maps
 # using the 353 GHz CIB map scaled up or down according to the fixed SED
-cib_decorr: False
+cib_decorr: True
 
 # range of values (including start point but not end point) to test for beta
-beta_range: [1.0, 2.0]
+beta_range: [1.5, 1.9]
 
 # number of beta values to test
 num_beta_vals: 20
 
 # number of beta values to test in parallel
 # if this input is not provided, no parallelization is assumed (num_parallel=1)
-num_parallel: 20
+num_parallel: 10
 
 # factors by which to inflate CIB and deproject for comparison
 cib_inflation: [1.0, 10.0]
 
 # type of noise to use (currently only supports 'Planck_no_beam', 'Planck_with_beam' or 'SO')
-noise_type: 'SO'
+noise_type: 'Planck_no_beam'
 
 # fraction of noise power spectrum from the chosen experiment (noise_type) to
 # use in the simulation of frequency maps 
-noise_fraction: 0.1
+noise_fraction: 1.0
 
 # fraction of noise beam from the chosen experiment (noise_type) to use in the 
 # simulation of frequency maps
 # Only applied if noise_type is 'Planck_no_beam' or 'Planck_with_beam'. 
 # If noise_type is 'SO', beam_fraction is ignored if provided.
-beam_fraction: 0.1
+beam_fraction: 1.0
 
 # whether to compute Gaussian covariance in harmonic space or 
 # use real space correlations with treecorr
@@ -70,21 +73,21 @@ harmonic_space: True
 # on NERSC: /global/cfs/cdirs/act/data/agora_sims/cib/planck/len/uk
 # CIB maps are assumed to be in units of uK
 # filenames within directory are assumed to be of form mdpl2_len_mag_cibmap_planck_{freq}_uk.fits
-cib_map_dir: '/scratch/09334/ksurrao/agora_planck/cib/low_res'
+cib_map_dir: '/scratch/09334/ksurrao/agora_planck/cib/nside_2048'
 
 # file for agora Compton-y map
 # on NERSC: /global/cfs/cdirs/act/data/agora_sims/tsz/len/mdpl2_ltszNG_bahamas80_rot_sum_4_176_bnd_unb_1.0e+12_1.0e+18_v103021_lmax24000_nside8192_interp1.0_method1_1_lensed_map.fits
-tsz_map_file: '/scratch/09334/ksurrao/agora_planck/tsz.fits'
+tsz_map_file: '/scratch/09334/ksurrao/agora_planck/tsz_2048.fits'
 
 # file for agora kSZ file, only needs to be provided if 'kSZ' is in the list of components
 # on NERSC: /global/cfs/cdirs/act/data/agora_sims/ksz/mdpl2_lkszNG_bahamas80_rot_sum_4_176_bnd_unb_1.0e+12_1.0e+18_v103021_lmax24000_nside8192_interp1.0_method1_1_lensed_map.fits
 # assumed to be in units of uK
-ksz_map_file: '/scratch/09334/ksurrao/agora_planck/ksz.fits'
+ksz_map_file: '/scratch/09334/ksurrao/agora_planck/ksz_2048.fits'
 
 # file for agora CMB file, only needs to be provided if 'CMB' is in the list of components
 # on NERSC: /global/cfs/cdirs/act/data/agora_sims/outputs/act/NEW_02Apr2024/agora_act_90ghz_lcmbNG_uk.fits
 # assumed to be in units of uK
-cmb_map_file: '/scratch/09334/ksurrao/agora_planck/cmb.fits'
+cmb_map_file: '/scratch/09334/ksurrao/agora_planck/cmb_2048.fits'
 
 # directory containing halo files from rot 1 to 30
 # can be downloaded from https://yomori.github.io/agora/index.html
@@ -94,13 +97,13 @@ halo_files_dir: '/scratch/09334/ksurrao/halo_files'
 # file containing single halo catalog
 # must either provide halo_catalog or a directory of halo files in halo_files_dir
 # if this input is provided, halo_files_dir will be ignored
-halo_catalog: '/scratch/09334/ksurrao/halo_files/haloslc_agora_zsel_0.8_to_1.8_Msel_1e12_to_1e15_rot120.h5'
+halo_catalog: '/scratch/09334/ksurrao/halo_files/haloslc_agora_zsel_0.3_to_0.8_Msel_5e+12_to_5e+14.h5'
 
 # path to pyilc repository
 pyilc_path: '/work2/09334/ksurrao/stampede3/Github/pyilc'
 
 # directory in which to save outputs
-output_dir: '/scratch/09334/ksurrao/cib_deproj_new_runs/planck_10percent'
+output_dir: '/scratch/09334/ksurrao/cib_deproj_new_runs/planck_lowzhalos_cibdecorr'
 
 # If debug is True, there will be more intermediate printing
 debug: False

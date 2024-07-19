@@ -2,7 +2,6 @@ import numpy as np
 import healpy as hp
 import treecorr
 import os
-from get_y_map import setup_pyilc
 from utils import binned
 from plot_correlations import plot_corr_harmonic, plot_corr_real
 
@@ -108,8 +107,8 @@ def harmonic_space_cov(inp, y1, y2, h):
     hh = binned(inp, hp.anafast(h, lmax=inp.ellmax))
     hy = binned(inp, hp.anafast(h, y1-y2, lmax=inp.ellmax))
     yy = binned(inp, hp.anafast(y1-y2, lmax=inp.ellmax))
-    Nmodes = 1/((2*inp.mean_ells+1)*inp.ells_per_bin)
-    cov_hy = np.diag(Nmodes*(hy**2 + hh*yy))
+    Nmodes = (2*inp.mean_ells+1)*inp.ells_per_bin
+    cov_hy = np.diag(1/Nmodes*(hy**2 + hh*yy))
     return cov_hy
 
 
@@ -136,7 +135,7 @@ def cov(inp, beta, ra_halos, dec_halos, h, inflated=False):
         infl_str = 'inflated_realistic' if inp.realistic else 'inflated'
         y2 = hp.read_map(f"{inp.output_dir}/pyilc_outputs/beta_{beta:.2f}_{infl_str}/needletILCmap_component_tSZ_deproject_CIB.fits")
     else:
-        y2 = hp.read_map(inp.tsz_map_file)
+        y2 = hp.read_map(f"{inp.output_dir}/pyilc_outputs/uninflated/needletILCmap_component_tSZ.fits")
         y2 = hp.ud_grade(y2, inp.nside)
     if inp.harmonic_space:
         cov_hy = harmonic_space_cov(inp, y1, y2, h)
@@ -247,7 +246,7 @@ def compare_chi2(inp, beta, ra_halos, dec_halos, h):
     chi2_true: float, chi^2 value of <h,y_reconstructed> and <h,y_true>
     chi2_inflated: float, chi^2 value of <h,y_reconstructed> and <h,y_reconstructed_with_inflated_cib>
     '''
-    y_true = hp.read_map(inp.tsz_map_file)
+    y_true = hp.read_map(f"{inp.output_dir}/pyilc_outputs/uninflated/needletILCmap_component_tSZ.fits")
     y_true = hp.ud_grade(y_true, inp.nside)
     y_recon = hp.read_map(f"{inp.output_dir}/pyilc_outputs/beta_{beta:.2f}_uninflated/needletILCmap_component_tSZ_deproject_CIB.fits")
     infl_str = 'inflated_realistic' if inp.realistic else 'inflated'
