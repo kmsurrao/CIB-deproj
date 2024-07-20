@@ -106,7 +106,7 @@ def main():
     get_freq_maps(inp, diff_noise=False, no_cib=False)
 
     # write beta yaml
-    beta = 1.684
+    beta = 1.668
     pars = {'beta_CIB': float(beta), 'Tdust_CIB': 24.0, 'nu0_CIB_ghz':353.0, 'kT_e_keV':5.0, 'nu0_radio_ghz':150.0, 'beta_radio': -0.5}
     beta_yaml = f'{inp.output_dir}/moment_deproj/beta_{beta:.2f}_param_dict.yaml'
     with open(beta_yaml, 'w') as outfile:

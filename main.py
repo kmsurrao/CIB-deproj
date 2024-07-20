@@ -40,9 +40,11 @@ def main():
 
     # Build standard ILC y-map (from maps with no CIB)
     print('Building standard ILC y-map from freq. maps without CIB...', flush=True)
-    get_freq_maps(inp, diff_noise=False, no_cib=True)
-    setup_pyilc(inp, env, 1.0, suppress_printing=True, inflated=False, \
-                standard_ilc=True, no_cib=True)
+    standard_ILC_file = f'{inp.output_dir}/pyilc_outputs/uninflated/needletILCmap_component_tSZ.fits'
+    if not os.path.isfile(standard_ILC_file):
+        get_freq_maps(inp, diff_noise=False, no_cib=True)
+        setup_pyilc(inp, env, 1.0, suppress_printing=True, inflated=False, \
+                    standard_ilc=True, no_cib=True)
 
 
     # Build y-maps with pyilc (deprojecting beta)

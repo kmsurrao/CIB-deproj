@@ -54,9 +54,9 @@ def setup_output_dir(inp, env, standard_ilc=False):
     if not os.path.isdir(f'{inp.output_dir}/pyilc_outputs'):
         subprocess.call(f'mkdir {inp.output_dir}/pyilc_outputs', shell=True, env=env)
     if inp.realistic:
-        inflation_strs = ['inflated_realistic', 'uninflated']
+        inflation_strs = ['uninflated', 'inflated_realistic']
     else:
-        inflation_strs = ['inflated', 'uninflated']
+        inflation_strs = ['uninflated', 'inflated']
     if not standard_ilc:
         beta_arr = np.linspace(inp.beta_range[0], inp.beta_range[1], num=inp.num_beta_vals)
         write_beta_yamls(inp)
@@ -64,10 +64,11 @@ def setup_output_dir(inp, env, standard_ilc=False):
             for i in inflation_strs:
                 if not os.path.isdir(f'{inp.output_dir}/pyilc_outputs/beta_{beta:.2f}_{i}'):
                     subprocess.call(f'mkdir {inp.output_dir}/pyilc_outputs/beta_{beta:.2f}_{i}', shell=True, env=env)
-    else:
-        for i in inflation_strs:
-            if not os.path.isdir(f'{inp.output_dir}/pyilc_outputs/{i}'):
-                subprocess.call(f'mkdir {inp.output_dir}/pyilc_outputs/{i}', shell=True, env=env)
+    for i in inflation_strs:
+        if not os.path.isdir(f'{inp.output_dir}/pyilc_outputs/{i}'):
+            subprocess.call(f'mkdir {inp.output_dir}/pyilc_outputs/{i}', shell=True, env=env)
+        if not standard_ilc:
+            break
 
     return
 
@@ -124,7 +125,7 @@ def cib_spectral_response(freqs):
         return 1./dBnudT(nu_ghz)
 
     Tdust_CIB = 20.0       #CIB effective dust temperature [K] (Table 9 of http://www.aanda.org/articles/aa/pdf/2014/11/aa22093-13.pdf)
-    beta_CIB = 1.45         #CIB modified blackbody spectral index (Table 9 of http://www.aanda.org/articles/aa/pdf/2014/11/aa22093-13.pdf ; Table 10 of that paper contains CIB monopoles)
+    beta_CIB = 1.668         #CIB modified blackbody spectral index (Table 9 of http://www.aanda.org/articles/aa/pdf/2014/11/aa22093-13.pdf ; Table 10 of that paper contains CIB monopoles)
     nu0_CIB_ghz = 353.0    #CIB pivot frequency [GHz]
 
     nu_ghz = freqs
