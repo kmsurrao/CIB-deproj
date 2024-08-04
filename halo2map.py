@@ -117,16 +117,8 @@ def halofile2map(inp):
     # halo_m_all = pickle.load(open(f'{inp.output_dir}/halo_m_all.p', 'rb'))      
 
     #you can change the selection to have more or less halos to boost the SNR of correlations.
-    # z_min, z_max = 0.8, 1.8
-    # M_min, M_max = 1e12, 1e15
-    z_min, z_max = 0.3, 0.8
-    M_min, M_max = 5e12, 5e14
-    indsel_z = np.where((halo_z_all > z_min) & (halo_z_all < z_max))[0]
-    indsel_M = np.where((halo_m_all > M_min) & (halo_m_all < M_max))[0]
-    indsel_all = np.intersect1d(indsel_z, indsel_M)
-
-    ra_halos = halo_ra_all[indsel_all]
-    dec_halos = halo_dec_all[indsel_all]
+    ra_halos = halo_ra_all
+    dec_halos = halo_dec_all
 
     pix = hp.ang2pix(inp.nside, ra_halos, dec_halos, nest=True, lonlat=True)
     pix.sort()
