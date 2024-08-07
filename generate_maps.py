@@ -108,7 +108,8 @@ def get_freq_maps(inp, diff_noise=False, no_cib=False):
 
     np.random.seed(0)
 
-    tsz_response_vec = tsz_spectral_response(inp.frequencies)
+    delta_bandpasses = True if not inp.cib_decorr else False
+    tsz_response_vec = tsz_spectral_response(inp.frequencies, delta_bandpasses = delta_bandpasses, inp=inp)
     ymap = hp.read_map(inp.tsz_map_file)
     ymap = hp.ud_grade(ymap, inp.nside) #unitless
     cib_map_143 = 10**(-6)*hp.ud_grade(hp.read_map(f'{inp.cib_map_dir}/mdpl2_len_mag_cibmap_planck_143_uk.fits'), inp.nside) #units of K

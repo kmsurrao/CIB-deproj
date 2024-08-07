@@ -7,7 +7,7 @@ realistic: True
 nside: 1024 
 
 # maximum ell for which to compute chi^2 and perform ILC
-ellmax: 2000
+ellmax: 3000
 
 # minimum ell for which to include power in maps
 ellmin: 0
@@ -32,15 +32,15 @@ ILC_type: 'needlet'
 # If ILC_type is 'needlet', array of FWHM (arcmin) used for constrution 
 # of Gaussians. (needlet filters are differences of two Gaussians). 
 # FWHM need to be in strictly decreasing order.
-GN_FWHM_arcmin: [30, 15, 7, 3] 
+GN_FWHM_arcmin: [30, 15, 7, 3] #[12., 6., 3., 1.5]
 
 # whether there's decorrelation across frequencies for the CIB maps
 # If False, assumes a fixed CIB SED with beta=1.45 and builds all CIB maps
 # using the 353 GHz CIB map scaled up or down according to the fixed SED
-cib_decorr: True
+cib_decorr: False
 
 # range of values (including start point but not end point) to test for beta
-beta_range: [1.5, 1.9]
+beta_range: [1.6, 1.7]
 
 # number of beta values to test
 num_beta_vals: 20
@@ -97,13 +97,14 @@ halo_files_dir: '/scratch/09334/ksurrao/halo_files'
 # file containing single halo catalog
 # must either provide halo_catalog or a directory of halo files in halo_files_dir
 # if this input is provided, halo_files_dir will be ignored
-halo_catalog: '/scratch/09334/ksurrao/halo_files/haloslc_agora_zsel_0.3_to_0.8_Msel_5e+12_to_5e+14.h5'
+#halo_catalog: '/scratch/09334/ksurrao/halo_files/haloslc_agora_zsel_0.3_to_0.8_Msel_5e+12_to_5e+14.h5'
+halo_catalog: '/scratch/09334/ksurrao/halo_files/haloslc_agora_zsel_0.8_to_1.8_Msel_1e12_to_1e15_rot120.h5'
 
 # path to pyilc repository
 pyilc_path: '/work2/09334/ksurrao/stampede3/Github/pyilc'
 
 # directory in which to save outputs
-output_dir: '/scratch/09334/ksurrao/cib_deproj_new_runs/planck_lowzhalos_cibdecorr'
+output_dir: '/scratch/09334/ksurrao/cib_deproj_fixed_bandpasses/planck_1p0noise_nocibdecorr'
 
 # If debug is True, there will be more intermediate printing
 debug: False

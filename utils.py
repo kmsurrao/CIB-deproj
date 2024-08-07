@@ -72,25 +72,57 @@ def setup_output_dir(inp, env, standard_ilc=False):
 
     return
 
+def dBnudT(nu_ghz):
+    '''
+    ARGUMENTS
+    ---------
+    nu_ghz: array-like of frequencies (GHz) to evaluate
 
-def tsz_spectral_response(freqs):
+    RETURNS
+    -------
+    blackbody derivative in uK_CMB
+    '''
+    TCMB = 2.726 #Kelvin
+    hplanck=6.626068e-34 #MKS
+    kboltz=1.3806503e-23 #MKS
+    clight=299792458.0 #MKS
+    TCMB_uK = 2.726e6 #micro-Kelvin
+    nu = 1.e9*np.asarray(nu_ghz)
+    X = hplanck*nu/(kboltz*TCMB)
+    return (2.*hplanck*nu**3.)/clight**2. * (np.exp(X))/(np.exp(X)-1.)**2. * X/TCMB_uK
+
+
+def tsz_spectral_response(freqs, delta_bandpasses=True, inp=None):
     '''
     ARGUMENTS
     ---------
     freqs: array-like, contains frequencies (GHz) for which to calculate tSZ spectral response
+    delta_bandpasses: Bool, if True, returns SED at freqs with Delta bandpasses;
+        if False, returns SED evaluated at actual Planck bandpasses
+    inp: If delta_bandpasses=False, must provide inp (Info object containing input parameter specifications)
 
     RETURNS
     ---------
     1D array containing tSZ spectral response to each frequency (units of K_CMB)
     '''
+    if not delta_bandpasses:
+        assert inp is not None, "tsz_spectral_response requires argument 'inp' if delta_bandpasses==False"
     T_cmb = 2.726
     T_cmb_uK = 2.726e6
     h = 6.62607004*10**(-34)
     kb = 1.38064852*10**(-23)
     response = []
     for freq in freqs:
-        x = h*(freq*10**9)/(kb*T_cmb) #x is v/56.9 GHz
-        response.append(T_cmb*(x*1/np.tanh(x/2)-4))
+        if delta_bandpasses:
+            x = h*(freq*10**9)/(kb*T_cmb) #x is v/56.9 GHz
+            response.append(T_cmb*(x*1/np.tanh(x/2)-4))
+        else:
+            x = h*(freq*10**9)/(kb*T_cmb) #x is v/56.9 GHz
+            delta_resp = T_cmb_uK*(x*1/np.tanh(x/2)-4)
+            bp_path = f'{inp.pyilc_path}/data/HFI_BANDPASS_F{int(freq)}_reformat.txt'
+            nu_ghz, trans = np.loadtxt(bp_path, usecols=(0,1), unpack=True)
+            val = np.trapz(trans * dBnudT(nu_ghz) * delta_resp, nu_ghz) / np.trapz(trans * dBnudT(nu_ghz), nu_ghz)
+            response.append(10**(-6)*val) # convert uK_CMB to K_CMB
     return np.array(response)
 
 
@@ -125,7 +157,7 @@ def cib_spectral_response(freqs):
         return 1./dBnudT(nu_ghz)
 
     Tdust_CIB = 24.0       #CIB effective dust temperature [K] (Table 9 of http://www.aanda.org/articles/aa/pdf/2014/11/aa22093-13.pdf)
-    beta_CIB = 1.668         #CIB modified blackbody spectral index (Table 9 of http://www.aanda.org/articles/aa/pdf/2014/11/aa22093-13.pdf ; Table 10 of that paper contains CIB monopoles)
+    beta_CIB = 1.65         #CIB modified blackbody spectral index (Table 9 of http://www.aanda.org/articles/aa/pdf/2014/11/aa22093-13.pdf ; Table 10 of that paper contains CIB monopoles)
     nu0_CIB_ghz = 353.0    #CIB pivot frequency [GHz]
 
     nu_ghz = freqs

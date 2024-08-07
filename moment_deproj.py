@@ -46,7 +46,10 @@ def setup_pyilc(inp, env, beta, suppress_printing=False):
     pyilc_input_params['taper_width'] = 0
     
     pyilc_input_params['N_freqs'] = len(inp.frequencies)
-    pyilc_input_params['bandpass_type'] = 'ActualBandpasses' 
+    if inp.cib_decorr:
+        pyilc_input_params['bandpass_type'] = 'ActualBandpasses'
+    else:
+        pyilc_input_params['bandpass_type'] = 'DeltaBandpasses' 
     pyilc_input_params['freqs_delta_ghz'] = inp.frequencies
 
     # the files where you have saved the bandpasses:
@@ -106,7 +109,7 @@ def main():
     get_freq_maps(inp, diff_noise=False, no_cib=False)
 
     # write beta yaml
-    beta = 1.668
+    beta = 1.65
     pars = {'beta_CIB': float(beta), 'Tdust_CIB': 24.0, 'nu0_CIB_ghz':353.0, 'kT_e_keV':5.0, 'nu0_radio_ghz':150.0, 'beta_radio': -0.5}
     beta_yaml = f'{inp.output_dir}/moment_deproj/beta_{beta:.2f}_param_dict.yaml'
     with open(beta_yaml, 'w') as outfile:

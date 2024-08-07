@@ -49,7 +49,7 @@ def main():
 
     # Build y-maps with pyilc (deprojecting beta)
     print('Building y-maps...', flush=True)
-    beta_arr = np.linspace(inp.beta_range[0], inp.beta_range[1], num=inp.num_beta_vals) 
+    beta_arr = np.linspace(inp.beta_range[0], inp.beta_range[1], num=inp.num_beta_vals, endpoint=False) 
     pool = mp.Pool(inp.num_parallel)
     inputs = [(inp, env, beta) for beta in beta_arr]
     _ = list(tqdm.tqdm(pool.imap(get_all_ymaps_star, inputs), total=len(beta_arr)))
