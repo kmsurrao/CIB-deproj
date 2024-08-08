@@ -59,7 +59,7 @@ def real_space_cov(inp, y1, y2, ra_halos, dec_halos, beta):
     ra_hp, dec_hp = hp.pix2ang(inp.nside, ipix=np.arange(hp.nside2npix(inp.nside)),lonlat=True)
     
     save_dir = f'{inp.output_dir}/results_test/'
-    save_filename_jk_obj = f'jk_obj_test_beta{beta::.3f}.pkl'
+    save_filename_jk_obj = f'jk_obj_test_beta{beta:.3f}.pkl'
 
     # number of patches to divide the full sky on. More of these, better the covariance estimate would be. Just make sure the size of patches is larger than the maximum separation you are interested in.
     njk = 512
@@ -130,10 +130,10 @@ def cov(inp, beta, ra_halos, dec_halos, h, inflated=False):
             if in harmonic space, (Nbins, Nbins) ndarray containing Gaussian covariance matrix of halos and y_recon
 
     '''
-    y1 = hp.read_map(f"{inp.output_dir}/pyilc_outputs/beta_{beta::.3f}_uninflated/needletILCmap_component_tSZ_deproject_CIB.fits")
+    y1 = hp.read_map(f"{inp.output_dir}/pyilc_outputs/beta_{beta:.3f}_uninflated/needletILCmap_component_tSZ_deproject_CIB.fits")
     if inflated:
         infl_str = 'inflated_realistic' if inp.realistic else 'inflated'
-        y2 = hp.read_map(f"{inp.output_dir}/pyilc_outputs/beta_{beta::.3f}_{infl_str}/needletILCmap_component_tSZ_deproject_CIB.fits")
+        y2 = hp.read_map(f"{inp.output_dir}/pyilc_outputs/beta_{beta:.3f}_{infl_str}/needletILCmap_component_tSZ_deproject_CIB.fits")
     else:
         y2 = hp.read_map(f"{inp.output_dir}/pyilc_outputs/uninflated/needletILCmap_component_tSZ.fits")
         y2 = hp.ud_grade(y2, inp.nside)
@@ -167,7 +167,7 @@ def compute_chi2_real_space(inp, y1, y2, ra_halos, dec_halos, beta, cov):
     ra_hp, dec_hp = hp.pix2ang(inp.nside, ipix=np.arange(hp.nside2npix(inp.nside)),lonlat=True)
     
     save_dir = f'{inp.output_dir}/results_test/'
-    save_filename_jk_obj = f'jk_obj_test_beta{beta::.3f}.pkl'
+    save_filename_jk_obj = f'jk_obj_test_beta{beta:.3f}.pkl'
 
     # number of patches to divide the full sky on. More of these, better the covariance estimate would be. Just make sure the size of patches is larger than the maximum separation you are interested in.
     njk = 512
@@ -248,9 +248,9 @@ def compare_chi2(inp, beta, ra_halos, dec_halos, h):
     '''
     y_true = hp.read_map(f"{inp.output_dir}/pyilc_outputs/uninflated/needletILCmap_component_tSZ.fits")
     y_true = hp.ud_grade(y_true, inp.nside)
-    y_recon = hp.read_map(f"{inp.output_dir}/pyilc_outputs/beta_{beta::.3f}_uninflated/needletILCmap_component_tSZ_deproject_CIB.fits")
+    y_recon = hp.read_map(f"{inp.output_dir}/pyilc_outputs/beta_{beta:.3f}_uninflated/needletILCmap_component_tSZ_deproject_CIB.fits")
     infl_str = 'inflated_realistic' if inp.realistic else 'inflated'
-    y_recon_inflated = hp.read_map(f"{inp.output_dir}/pyilc_outputs/beta_{beta::.3f}_{infl_str}/needletILCmap_component_tSZ_deproject_CIB.fits")
+    y_recon_inflated = hp.read_map(f"{inp.output_dir}/pyilc_outputs/beta_{beta:.3f}_{infl_str}/needletILCmap_component_tSZ_deproject_CIB.fits")
     
     if inp.harmonic_space:
         chi2_true, hy_true = compute_chi2_harmonic_space(inp, y_recon, y_true, h, inp.cov_hytrue)
