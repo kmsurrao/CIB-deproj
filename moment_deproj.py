@@ -28,7 +28,7 @@ def setup_pyilc(inp, env, beta, suppress_printing=False):
     #set up yaml files for pyilc
     
     pyilc_input_params = {}
-    beta_str = f'beta_{beta:.2f}_'
+    beta_str = f'beta_{beta::.3f}_'
     pyilc_input_params['output_dir'] = str(inp.output_dir) + f"/moment_deproj/"
 
     pyilc_input_params['output_prefix'] = ""
@@ -43,7 +43,7 @@ def setup_pyilc(inp, env, beta, suppress_printing=False):
         pyilc_input_params['wavelet_type'] = "GaussianNeedlets"
         pyilc_input_params['GN_FWHM_arcmin'] = [inp.GN_FWHM_arcmin[i] for i in range(len(inp.GN_FWHM_arcmin))]
         pyilc_input_params['N_scales'] = len(inp.GN_FWHM_arcmin)+1
-    pyilc_input_params['taper_width'] = 0
+    pyilc_input_params['taper_width'] = 200
     
     pyilc_input_params['N_freqs'] = len(inp.frequencies)
     if inp.cib_decorr:
@@ -78,7 +78,7 @@ def setup_pyilc(inp, env, beta, suppress_printing=False):
     stderr = subprocess.DEVNULL if suppress_printing else None
     subprocess.run([f"python {inp.pyilc_path}/pyilc/main.py {ymap_yaml}"], shell=True, env=env, stdout=stdout, stderr=stderr)
     if inp.debug:
-        print(f'generated ILC maps for beta={beta:.2f}', flush=True)
+        print(f'generated ILC maps for beta={beta::.3f}', flush=True)
     deproj_str = '_deproject_CIB_CIB_dbeta'
     ymap = hp.read_map(f"{inp.output_dir}/moment_deproj/needletILCmap_component_tSZ{deproj_str}.fits")
     
@@ -111,7 +111,7 @@ def main():
     # write beta yaml
     beta = 1.65
     pars = {'beta_CIB': float(beta), 'Tdust_CIB': 24.0, 'nu0_CIB_ghz':353.0, 'kT_e_keV':5.0, 'nu0_radio_ghz':150.0, 'beta_radio': -0.5}
-    beta_yaml = f'{inp.output_dir}/moment_deproj/beta_{beta:.2f}_param_dict.yaml'
+    beta_yaml = f'{inp.output_dir}/moment_deproj/beta_{beta::.3f}_param_dict.yaml'
     with open(beta_yaml, 'w') as outfile:
         yaml.dump(pars, outfile, default_flow_style=None)
 

@@ -18,10 +18,10 @@ def write_beta_yamls(inp):
     -------
     None
     '''
-    beta_arr = np.linspace(inp.beta_range[0], inp.beta_range[1], num=inp.num_beta_vals, dtype=np.float32)
+    beta_arr = np.linspace(inp.beta_range[0], inp.beta_range[1], num=inp.num_beta_vals, endpoint=False, dtype=np.float32)
     for beta in beta_arr:
         pars = {'beta_CIB': float(beta), 'Tdust_CIB': 24.0, 'nu0_CIB_ghz':353.0, 'kT_e_keV':5.0, 'nu0_radio_ghz':150.0, 'beta_radio': -0.5}
-        beta_yaml = f'{inp.output_dir}/pyilc_yaml_files/beta_{beta:.2f}.yaml'
+        beta_yaml = f'{inp.output_dir}/pyilc_yaml_files/beta_{beta:.3f}.yaml'
         with open(beta_yaml, 'w') as outfile:
             yaml.dump(pars, outfile, default_flow_style=None)
     return
@@ -58,12 +58,12 @@ def setup_output_dir(inp, env, standard_ilc=False):
     else:
         inflation_strs = ['uninflated', 'inflated']
     if not standard_ilc:
-        beta_arr = np.linspace(inp.beta_range[0], inp.beta_range[1], num=inp.num_beta_vals)
+        beta_arr = np.linspace(inp.beta_range[0], inp.beta_range[1], num=inp.num_beta_vals, endpoint=False)
         write_beta_yamls(inp)
         for beta in beta_arr:
             for i in inflation_strs:
-                if not os.path.isdir(f'{inp.output_dir}/pyilc_outputs/beta_{beta:.2f}_{i}'):
-                    subprocess.call(f'mkdir {inp.output_dir}/pyilc_outputs/beta_{beta:.2f}_{i}', shell=True, env=env)
+                if not os.path.isdir(f'{inp.output_dir}/pyilc_outputs/beta_{beta:.3f}_{i}'):
+                    subprocess.call(f'mkdir {inp.output_dir}/pyilc_outputs/beta_{beta:.3f}_{i}', shell=True, env=env)
     for i in inflation_strs:
         if not os.path.isdir(f'{inp.output_dir}/pyilc_outputs/{i}'):
             subprocess.call(f'mkdir {inp.output_dir}/pyilc_outputs/{i}', shell=True, env=env)

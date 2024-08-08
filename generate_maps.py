@@ -169,13 +169,13 @@ def get_realistic_infl_maps(inp, beta):
     -------
     None (writes frequency maps to output_dir)
     '''
-    ymap = hp.read_map(f"{inp.output_dir}/pyilc_outputs/beta_{beta:.2f}_uninflated/needletILCmap_component_tSZ_deproject_CIB.fits")
+    ymap = hp.read_map(f"{inp.output_dir}/pyilc_outputs/beta_{beta::.3f}_uninflated/needletILCmap_component_tSZ_deproject_CIB.fits")
     sed_vec = tsz_spectral_response(inp.frequencies)
     for i, freq in enumerate(inp.frequencies):
         orig_freq_map = hp.read_map(f'{inp.output_dir}/maps/uninflated_{freq}.fits')
         residual = orig_freq_map - sed_vec[i]*ymap
         infl_map = orig_freq_map + inp.cib_inflation[1]*residual
-        hp.write_map(f'{inp.output_dir}/maps/inflated_realistic_{freq}_{beta:.2f}.fits', infl_map, overwrite=True, dtype=np.float32)
+        hp.write_map(f'{inp.output_dir}/maps/inflated_realistic_{freq}_{beta::.3f}.fits', infl_map, overwrite=True, dtype=np.float32)
         if inp.debug:
-            print(f'saved {inp.output_dir}/maps/inflated_realistic_{freq}_{beta:.2f}.fits', flush=True)
+            print(f'saved {inp.output_dir}/maps/inflated_realistic_{freq}_{beta::.3f}.fits', flush=True)
     return
