@@ -92,6 +92,25 @@ def dBnudT(nu_ghz):
     return (2.*hplanck*nu**3.)/clight**2. * (np.exp(X))/(np.exp(X)-1.)**2. * X/TCMB_uK
 
 
+def tsz_delta_sed(freq):
+    '''
+    ARGUMENTS
+    ---------
+    freqs: float, frequency (GHz) for which to calculate tSZ spectral response in a delta bandpass
+
+    RETURNS
+    ---------
+    sed: float, tSZ spectral response to freq (units of K_CMB)
+    '''
+    T_cmb = 2.726
+    T_cmb_uK = 2.726e6
+    h = 6.62607004*10**(-34)
+    kb = 1.38064852*10**(-23)
+    x = h*(freq*10**9)/(kb*T_cmb) #x is v/56.9 GHz
+    sed = T_cmb*(x*1/np.tanh(x/2)-4)
+    return sed
+
+
 def tsz_spectral_response(freqs, delta_bandpasses=True, inp=None):
     '''
     ARGUMENTS
@@ -107,22 +126,16 @@ def tsz_spectral_response(freqs, delta_bandpasses=True, inp=None):
     '''
     if not delta_bandpasses:
         assert inp is not None, "tsz_spectral_response requires argument 'inp' if delta_bandpasses==False"
-    T_cmb = 2.726
-    T_cmb_uK = 2.726e6
-    h = 6.62607004*10**(-34)
-    kb = 1.38064852*10**(-23)
     response = []
     for freq in freqs:
         if delta_bandpasses:
-            x = h*(freq*10**9)/(kb*T_cmb) #x is v/56.9 GHz
-            response.append(T_cmb*(x*1/np.tanh(x/2)-4))
+            response.append(tsz_delta_sed(freq))
         else:
-            x = h*(freq*10**9)/(kb*T_cmb) #x is v/56.9 GHz
-            delta_resp = T_cmb_uK*(x*1/np.tanh(x/2)-4)
             bp_path = f'{inp.pyilc_path}/data/HFI_BANDPASS_F{int(freq)}_reformat.txt'
             nu_ghz, trans = np.loadtxt(bp_path, usecols=(0,1), unpack=True)
+            delta_resp = np.array([tsz_delta_sed(n) for n in nu_ghz])
             val = np.trapz(trans * dBnudT(nu_ghz) * delta_resp, nu_ghz) / np.trapz(trans * dBnudT(nu_ghz), nu_ghz)
-            response.append(10**(-6)*val) # convert uK_CMB to K_CMB
+            response.append(val) #K_CMB
     return np.array(response)
 
 

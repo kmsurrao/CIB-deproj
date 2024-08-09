@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from input import Info
 from get_y_map import setup_pyilc
 from halo2map import halodir2map, halofile2map
+from generate_maps import get_freq_maps
 from utils import *
 
 def main():
