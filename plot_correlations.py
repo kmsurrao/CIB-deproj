@@ -6,7 +6,7 @@ from scipy import stats
 from utils import binned
 
 
-def plot_corr_harmonic(inp, beta, hy_true, hy_infl):
+def plot_corr_harmonic(inp, beta, T, hy_true, hy_infl):
     '''
     Plots harmonic space correlations (power spectra) given the spectra
 
@@ -14,6 +14,7 @@ def plot_corr_harmonic(inp, beta, hy_true, hy_infl):
     ---------
     inp: Info object containing input parameter specifications
     beta: float, value of beta for CIB deprojection
+    T: float, value of Tdust_CIB for CIB deprojection
     hy_true: 1D numpy array of length Nbins containing cross-spectrum of halos with 
         (y_reconstructed - y_true)
     hy_infl: 1D numpy array of length Nbins containing cross-spectrum of halos with 
@@ -37,17 +38,17 @@ def plot_corr_harmonic(inp, beta, hy_true, hy_infl):
     plt.ylabel(r'$\ell(\ell+1)C_\ell /(2\pi)$ [$\mu \mathrm{K}^2$]')
     plt.xlabel(r'$\ell$')
     plt.legend()
-    plt.title(r'$h \times y$, $\beta=$' + f'{beta:0.3f}')
-    plt.savefig(f'{inp.output_dir}/correlation_plots/beta_{beta:0.3f}.png')
+    plt.title(r'$h \times y$, $\beta=$' + f'{beta:0.3f}, T={T:0.3f}')
+    plt.savefig(f'{inp.output_dir}/correlation_plots/beta{beta:0.3f}_T{T:0.3f}.png')
 
     # save mean_ells, spectra, and errors to plot later
     to_save = [mean_ells, to_dl, hy_true, hy_infl]
-    pickle.dump(to_save, open(f'{inp.output_dir}/correlation_plots/beta_{beta:0.3f}.p', 'wb'))
+    pickle.dump(to_save, open(f'{inp.output_dir}/correlation_plots/beta{beta:0.3f}_T{T:0.3f}.p', 'wb'))
 
     return
 
 
-def plot_corr_real(inp, beta, hy_true, hy_infl, r_hy):
+def plot_corr_real(inp, beta, T, hy_true, hy_infl, r_hy):
     '''
     Plots real space correlations
 
@@ -55,6 +56,7 @@ def plot_corr_real(inp, beta, hy_true, hy_infl, r_hy):
     ---------
     inp: Info object containing input parameter specifications
     beta: float, value of beta for CIB deprojection
+    T: float, value of Tdust_CIB for CIB deprojection
     hy_true: 1D numpy array of length nrad containing correlation of halos with 
         (reconstructed y - true y)
     hy_infl: 1D numpy array of length nrad containing correlation of halos with 
@@ -73,11 +75,11 @@ def plot_corr_real(inp, beta, hy_true, hy_infl, r_hy):
     plt.legend()
     plt.xscale('log')
     plt.yscale('log')
-    plt.savefig(f'{inp.output_dir}/correlation_plots/beta_{beta:0.3f}.png')
+    plt.savefig(f'{inp.output_dir}/correlation_plots/beta{beta:0.3f}_T{T:0.3f}.png')
 
     # save spectra and errors to plot later
     to_save = [hy_true, hy_infl, r_hy]
-    pickle.dump(to_save, open(f'{inp.output_dir}/correlation_plots/beta_{beta:0.3f}.p', 'wb'))
+    pickle.dump(to_save, open(f'{inp.output_dir}/correlation_plots/beta{beta:0.3f}_T{T:0.3f}.p', 'wb'))
 
     return
 

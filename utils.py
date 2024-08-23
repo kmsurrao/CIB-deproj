@@ -1,12 +1,12 @@
 import numpy as np
-import healpy as hp
 import subprocess
 import os
 import yaml
+import itertools
 from scipy import stats
 
 
-def write_beta_yamls(inp):
+def write_sed_yamls(inp):
     '''
     Writes yaml files for fg SEDs for each beta value used for CIB deprojection
 
@@ -19,10 +19,11 @@ def write_beta_yamls(inp):
     None
     '''
     beta_arr = np.linspace(inp.beta_range[0], inp.beta_range[1], num=inp.num_beta_vals, endpoint=False, dtype=np.float32)
-    for beta in beta_arr:
-        pars = {'beta_CIB': float(beta), 'Tdust_CIB': 24.0, 'nu0_CIB_ghz':353.0, 'kT_e_keV':5.0, 'nu0_radio_ghz':150.0, 'beta_radio': -0.5}
-        beta_yaml = f'{inp.output_dir}/pyilc_yaml_files/beta_{beta:.3f}.yaml'
-        with open(beta_yaml, 'w') as outfile:
+    T_arr = np.linspace(inp.T_range[0], inp.T_range[1], num=inp.num_T_vals, endpoint=False, dtype=np.float32)
+    for beta, T in list(itertools.product(beta_arr, T_arr)):
+        pars = {'beta_CIB': float(beta), 'Tdust_CIB': float(T), 'nu0_CIB_ghz':353.0, 'kT_e_keV':5.0, 'nu0_radio_ghz':150.0, 'beta_radio': -0.5}
+        sed_yaml = f'{inp.output_dir}/pyilc_yaml_files/sed_{beta:.3f}_{T:.3f}.yaml'
+        with open(sed_yaml, 'w') as outfile:
             yaml.dump(pars, outfile, default_flow_style=None)
     return
 
@@ -59,11 +60,12 @@ def setup_output_dir(inp, env, standard_ilc=False):
         inflation_strs = ['uninflated', 'inflated']
     if not standard_ilc:
         beta_arr = np.linspace(inp.beta_range[0], inp.beta_range[1], num=inp.num_beta_vals, endpoint=False)
-        write_beta_yamls(inp)
-        for beta in beta_arr:
+        T_arr = np.linspace(inp.T_range[0], inp.T_range[1], num=inp.num_T_vals, endpoint=False, dtype=np.float32)
+        write_sed_yamls(inp)
+        for beta, T in list(itertools.product(beta_arr, T_arr)):
             for i in inflation_strs:
-                if not os.path.isdir(f'{inp.output_dir}/pyilc_outputs/beta_{beta:.3f}_{i}'):
-                    subprocess.call(f'mkdir {inp.output_dir}/pyilc_outputs/beta_{beta:.3f}_{i}', shell=True, env=env)
+                if not os.path.isdir(f'{inp.output_dir}/pyilc_outputs/beta{beta:.3f}_T{T:.3f}_{i}'):
+                    subprocess.call(f'mkdir {inp.output_dir}/pyilc_outputs/beta{beta:.3f}_T{T:.3f}_{i}', shell=True, env=env)
     for i in inflation_strs:
         if not os.path.isdir(f'{inp.output_dir}/pyilc_outputs/{i}'):
             subprocess.call(f'mkdir {inp.output_dir}/pyilc_outputs/{i}', shell=True, env=env)

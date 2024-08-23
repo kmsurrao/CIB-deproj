@@ -155,7 +155,7 @@ def get_freq_maps(inp, diff_noise=False, no_cib=False):
     return
 
 
-def get_realistic_infl_maps(inp, beta):
+def get_realistic_infl_maps(inp, beta, T):
     '''
     Run this function to get realistic inflated CIB maps using
     residual (full frequency maps - tSZ SED * y-map with some deprojected beta)
@@ -163,20 +163,21 @@ def get_realistic_infl_maps(inp, beta):
     ARGUMENTS
     ---------
     inp: Info object containing input parameter specifications
-    beta: int, beta value used to build original y-map to subtract for residual
+    beta: float, beta value used to build original y-map to subtract for residual
+    T: float, Tdust_CIB value used to build original y-map to subtract for residual
 
     RETURNS
     -------
     None (writes frequency maps to output_dir)
     '''
-    ymap = hp.read_map(f"{inp.output_dir}/pyilc_outputs/beta_{beta:.3f}_uninflated/needletILCmap_component_tSZ_deproject_CIB.fits")
+    ymap = hp.read_map(f"{inp.output_dir}/pyilc_outputs/beta{beta:.3f}_T{T:.3f}_uninflated/needletILCmap_component_tSZ_deproject_CIB.fits")
     delta_bandpasses = True if not inp.cib_decorr else False
     sed_vec = tsz_spectral_response(inp.frequencies, delta_bandpasses = delta_bandpasses, inp=inp)
     for i, freq in enumerate(inp.frequencies):
         orig_freq_map = hp.read_map(f'{inp.output_dir}/maps/uninflated_{freq}.fits')
         residual = orig_freq_map - sed_vec[i]*ymap
         infl_map = orig_freq_map + inp.cib_inflation[1]*residual
-        hp.write_map(f'{inp.output_dir}/maps/inflated_realistic_{freq}_{beta:.3f}.fits', infl_map, overwrite=True, dtype=np.float32)
+        hp.write_map(f'{inp.output_dir}/maps/inflated_realistic_{freq}_{beta:.3f}_{T:.3f}.fits', infl_map, overwrite=True, dtype=np.float32)
         if inp.debug:
-            print(f'saved {inp.output_dir}/maps/inflated_realistic_{freq}_{beta:.3f}.fits', flush=True)
+            print(f'saved {inp.output_dir}/maps/inflated_realistic_{freq}_{beta:.3f}_{T:.3f}.fits', flush=True)
     return

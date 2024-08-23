@@ -3,6 +3,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 from input import Info
+import healpy as hp
 from get_y_map import setup_pyilc
 from halo2map import halodir2map, halofile2map
 from generate_maps import get_freq_maps
@@ -11,7 +12,7 @@ from utils import *
 def main():
 
     # main input file containing most specifications 
-    parser = argparse.ArgumentParser(description="Optimal beta value for CIB deprojection.")
+    parser = argparse.ArgumentParser(description="Optimal SED for CIB deprojection.")
     parser.add_argument("--config", default="example.yaml")
     args = parser.parse_args()
     input_file = args.config
@@ -29,8 +30,8 @@ def main():
 
     # run pyilc
     print('Running pyilc...', flush=True)  
-    y_uninflated_cib = setup_pyilc(inp, env, 1.0, suppress_printing=(not inp.debug), inflated=False, standard_ilc=True)
-    y_inflated_cib = setup_pyilc(inp, env, 1.0, suppress_printing=(not inp.debug), inflated=True, standard_ilc=True) 
+    y_uninflated_cib = setup_pyilc(inp, env, 1.0, 1.0, suppress_printing=(not inp.debug), inflated=False, standard_ilc=True)
+    y_inflated_cib = setup_pyilc(inp, env, 1.0, 1.0, suppress_printing=(not inp.debug), inflated=True, standard_ilc=True) 
     y_true = hp.ud_grade(hp.read_map(inp.tsz_map_file), inp.nside)
 
     # get power spectra and plot

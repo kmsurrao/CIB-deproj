@@ -5,7 +5,7 @@ import os
 from generate_maps import get_realistic_infl_maps
 
 
-def setup_pyilc(inp, env, beta, suppress_printing=False, inflated=False, standard_ilc=False, no_cib=False):
+def setup_pyilc(inp, env, beta, T, suppress_printing=False, inflated=False, standard_ilc=False, no_cib=False):
     '''
     Sets up yaml files for pyilc and runs the code
 
@@ -14,6 +14,7 @@ def setup_pyilc(inp, env, beta, suppress_printing=False, inflated=False, standar
     inp: Info object containing input parameter specifications
     env: environment object
     beta: float, beta value to use for CIB deprojection
+    T: float, Tdust_CIB value to use for CIB deprojection
     suppress_printing: Bool, whether to suppress outputs and errors from pyilc code itself
     inflated: Bool, whether or not to use inflated CIB frequency maps
     standard_ilc: Bool, whether to use a standard ILC without CIB deprojection
@@ -30,15 +31,16 @@ def setup_pyilc(inp, env, beta, suppress_printing=False, inflated=False, standar
     inflated_str = 'inflated' if inflated else 'uninflated'
     if inp.realistic and inflated:
         inflated_str += '_realistic'
-    if not standard_ilc:
-        pyilc_input_params['output_dir'] = str(inp.output_dir) + f"/pyilc_outputs/beta_{beta:.3f}_{inflated_str}/"
+    if standard_ilc:
+        sed_str = ''
     else:
-        pyilc_input_params['output_dir'] = str(inp.output_dir) + f"/pyilc_outputs/{inflated_str}/"
+        sed_str = f'beta{beta:.3f}_T{T:.3f}_'
+    pyilc_input_params['output_dir'] = str(inp.output_dir) + f"/pyilc_outputs/{sed_str}{inflated_str}/"
 
     pyilc_input_params['output_prefix'] = ""
     pyilc_input_params['save_weights'] = "no"
     if not standard_ilc:
-        pyilc_input_params['param_dict_file'] = f'{inp.output_dir}/pyilc_yaml_files/beta_{beta:.3f}.yaml'
+        pyilc_input_params['param_dict_file'] = f'{inp.output_dir}/pyilc_yaml_files/sed_{beta:.3f}_{T:.3f}.yaml'
     
     pyilc_input_params['ELLMAX'] = inp.ellmax
     pyilc_input_params['BinSize'] = inp.ells_per_bin
@@ -48,7 +50,7 @@ def setup_pyilc(inp, env, beta, suppress_printing=False, inflated=False, standar
         pyilc_input_params['wavelet_type'] = "GaussianNeedlets"
         pyilc_input_params['GN_FWHM_arcmin'] = [inp.GN_FWHM_arcmin[i] for i in range(len(inp.GN_FWHM_arcmin))]
         pyilc_input_params['N_scales'] = len(inp.GN_FWHM_arcmin)+1
-    pyilc_input_params['taper_width'] = 200
+    pyilc_input_params['taper_width'] = 100
     
     pyilc_input_params['N_freqs'] = len(inp.frequencies)
     if inp.cib_decorr:
@@ -65,7 +67,7 @@ def setup_pyilc(inp, env, beta, suppress_printing=False, inflated=False, standar
             [f'{inp.output_dir}/maps/no_cib_{freq}.fits' for freq in inp.frequencies]
     elif inflated and inp.realistic:
         pyilc_input_params['freq_map_files'] = \
-            [f'{inp.output_dir}/maps/{inflated_str}_{freq}_{beta:.3f}.fits' for freq in inp.frequencies]
+            [f'{inp.output_dir}/maps/{inflated_str}_{freq}_{beta:.3f}_{T:.3f}.fits' for freq in inp.frequencies]
     else:
         pyilc_input_params['freq_map_files'] = \
             [f'{inp.output_dir}/maps/{inflated_str}_{freq}.fits' for freq in inp.frequencies]
@@ -84,54 +86,47 @@ def setup_pyilc(inp, env, beta, suppress_printing=False, inflated=False, standar
     pyilc_input_params['N_maps_xcorr'] = 0
     pyilc_input_params['save_as'] = 'fits'
 
-    if standard_ilc:
-        beta_str = ''
-    else:
-        beta_str = f'beta{beta:.3f}_'
     if inflated:
-        ymap_yaml = f'{inp.output_dir}/pyilc_yaml_files/{beta_str}inflated.yml'
+        ymap_yaml = f'{inp.output_dir}/pyilc_yaml_files/{sed_str}inflated.yml'
     else:
-        ymap_yaml = f'{inp.output_dir}/pyilc_yaml_files/{beta_str}uninflated.yml'
+        ymap_yaml = f'{inp.output_dir}/pyilc_yaml_files/{sed_str}uninflated.yml'
     with open(ymap_yaml, 'w') as outfile:
         yaml.dump(pyilc_input_params, outfile, default_flow_style=None)
-
 
     #run pyilc and return y-map
     stdout = subprocess.DEVNULL
     stderr = subprocess.DEVNULL if suppress_printing else None
     subprocess.run([f"python {inp.pyilc_path}/pyilc/main.py {ymap_yaml}"], shell=True, env=env, stdout=stdout, stderr=stderr)
     if inp.debug:
-        print(f'generated ILC maps for beta={beta:.3f}, inflated={inflated}', flush=True)
-    beta_str = f'beta_{beta:.3f}_' if not standard_ilc else ''
+        print(f'generated ILC maps for beta={beta:.3f}, T={T:.3f}, inflated={inflated}', flush=True)
     deproj_str = '_deproject_CIB' if not standard_ilc else ''
-    ymap = hp.read_map(f"{inp.output_dir}/pyilc_outputs/{beta_str}{inflated_str}/needletILCmap_component_tSZ{deproj_str}.fits")
-    
-    
+    ymap = hp.read_map(f"{inp.output_dir}/pyilc_outputs/{sed_str}{inflated_str}/needletILCmap_component_tSZ{deproj_str}.fits")   
     return ymap
 
 
-def get_all_ymaps(inp, env, beta):
+def get_all_ymaps(inp, env, beta, T):
     '''
     ARGUMENTS
     ---------
     inp: Info object containing input parameter specifications
     env: environment object
     beta: float, value of beta for CIB deprojection
+    T: float, value of Tdust_CIB for CIB deprojection
 
     RETURNS
     -------
     1
 
     '''
-    y_recon_file = f"{inp.output_dir}/pyilc_outputs/beta_{beta:.3f}_uninflated/needletILCmap_component_tSZ_deproject_CIB.fits"
+    y_recon_file = f"{inp.output_dir}/pyilc_outputs/beta{beta:.3f}_T{T:.3f}_uninflated/needletILCmap_component_tSZ_deproject_CIB.fits"
     if not os.path.isfile(y_recon_file):
-        setup_pyilc(inp, env, beta, inflated=False, suppress_printing=(not inp.debug))
+        setup_pyilc(inp, env, beta, T, inflated=False, suppress_printing=(not inp.debug))
     infl_str = 'inflated_realistic' if inp.realistic else 'inflated'
-    y_recon_infl_file = f"{inp.output_dir}/pyilc_outputs/beta_{beta:.3f}_{infl_str}/needletILCmap_component_tSZ_deproject_CIB.fits"
+    y_recon_infl_file = f"{inp.output_dir}/pyilc_outputs/beta{beta:.3f}_T{T:.3f}_{infl_str}/needletILCmap_component_tSZ_deproject_CIB.fits"
     if not os.path.isfile(y_recon_infl_file):
         if inp.realistic:
-            get_realistic_infl_maps(inp, beta)
-        setup_pyilc(inp, env, beta, inflated=True, suppress_printing=(not inp.debug))
+            get_realistic_infl_maps(inp, beta, T)
+        setup_pyilc(inp, env, beta, T, inflated=True, suppress_printing=(not inp.debug))
     return 1
 
 
@@ -146,6 +141,6 @@ def get_all_ymaps_star(args):
 
     RETURNS
     -------
-    function of *args, get_all_ymaps(inp, env, beta)
+    function of *args, get_all_ymaps(inp, env, beta, T)
     '''
     return get_all_ymaps(*args)

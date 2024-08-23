@@ -40,7 +40,7 @@ def randsphere(num, ra_range=[0,360], dec_range=[-90,90]):
     return ra, dec
 
 
-def real_space_cov(inp, y1, y2, ra_halos, dec_halos, beta):
+def real_space_cov(inp, y1, y2, ra_halos, dec_halos, beta, T):
     '''
     ARGUMENTS
     ---------
@@ -51,6 +51,7 @@ def real_space_cov(inp, y1, y2, ra_halos, dec_halos, beta):
     ra_halos: ndarray containing ra of halos
     dec_halos: ndarray containing dec of halos
     beta: float, beta value used for CIB deprojection (just used for file naming here)
+    T: float, Tdust_CIB value used for CIB deprojection (just used for file naming here)
 
     RETURNS
     -------
@@ -59,11 +60,11 @@ def real_space_cov(inp, y1, y2, ra_halos, dec_halos, beta):
     ra_hp, dec_hp = hp.pix2ang(inp.nside, ipix=np.arange(hp.nside2npix(inp.nside)),lonlat=True)
     
     save_dir = f'{inp.output_dir}/results_test/'
-    save_filename_jk_obj = f'jk_obj_test_beta{beta:.3f}.pkl'
+    save_filename_jk_obj = f'jk_obj_test_beta{beta:.3f}_T{T:.3f}.pkl'
 
     # number of patches to divide the full sky on. More of these, better the covariance estimate would be. Just make sure the size of patches is larger than the maximum separation you are interested in.
     njk = 512
-    nthreads = 256//(4*inp.num_beta_vals)
+    nthreads = 256//(4*inp.num_parallel)
     # This is the accuracy setting. If the bin_slop is set to 0.0, it will take longer to run but correlation would be correct. If you want to run it faster, increase the bin_slop to 0.1 or 0.2. This will make the code run faster, but the correlation estimate will be less accurate.
     bin_slop = 0.0
 
@@ -112,12 +113,13 @@ def harmonic_space_cov(inp, y1, y2, h):
     return cov_hy
 
 
-def cov(inp, beta, ra_halos, dec_halos, h, inflated=False):
+def cov(inp, beta, T, ra_halos, dec_halos, h, inflated=False):
     '''
     ARGUMENTS
     ---------
     inp: Info object containing input parameter specifications
     beta: float, value of beta for CIB deprojection
+    T: float, value of Tdust_CIB for CIB deprojection
     ra_halos: ndarray containing ra of halos
     dec_halos: ndarray containing dec of halos
     h: 1D numpy array in RING format containing halo map
@@ -130,21 +132,21 @@ def cov(inp, beta, ra_halos, dec_halos, h, inflated=False):
             if in harmonic space, (Nbins, Nbins) ndarray containing Gaussian covariance matrix of halos and y_recon
 
     '''
-    y1 = hp.read_map(f"{inp.output_dir}/pyilc_outputs/beta_{beta:.3f}_uninflated/needletILCmap_component_tSZ_deproject_CIB.fits")
+    y1 = hp.read_map(f"{inp.output_dir}/pyilc_outputs/beta{beta:.3f}_T{T:.3f}_uninflated/needletILCmap_component_tSZ_deproject_CIB.fits")
     if inflated:
         infl_str = 'inflated_realistic' if inp.realistic else 'inflated'
-        y2 = hp.read_map(f"{inp.output_dir}/pyilc_outputs/beta_{beta:.3f}_{infl_str}/needletILCmap_component_tSZ_deproject_CIB.fits")
+        y2 = hp.read_map(f"{inp.output_dir}/pyilc_outputs/beta{beta:.3f}_T{T:.3f}_{infl_str}/needletILCmap_component_tSZ_deproject_CIB.fits")
     else:
         y2 = hp.read_map(f"{inp.output_dir}/pyilc_outputs/uninflated/needletILCmap_component_tSZ.fits")
         y2 = hp.ud_grade(y2, inp.nside)
     if inp.harmonic_space:
         cov_hy = harmonic_space_cov(inp, y1, y2, h)
     else: 
-        cov_hy = real_space_cov(inp, y1, y2, ra_halos, dec_halos, beta)
+        cov_hy = real_space_cov(inp, y1, y2, ra_halos, dec_halos, beta, T)
     return cov_hy
 
 
-def compute_chi2_real_space(inp, y1, y2, ra_halos, dec_halos, beta, cov):
+def compute_chi2_real_space(inp, y1, y2, ra_halos, dec_halos, beta, T, cov):
     '''
     ARGUMENTS
     ---------
@@ -155,6 +157,7 @@ def compute_chi2_real_space(inp, y1, y2, ra_halos, dec_halos, beta, cov):
     ra_halos: ndarray containing ra of halos
     dec_halos: ndarray containing dec of halos
     beta: float, beta value used for CIB deprojection (just used for file naming here)
+    T: float, Tdust_CIB value used for CIB deprojection (just used for file naming here)
     cov: (Nrad, Nrad) ndarray containing covariance matrix of halos and (y1-y2)
 
     RETURNS
@@ -167,11 +170,11 @@ def compute_chi2_real_space(inp, y1, y2, ra_halos, dec_halos, beta, cov):
     ra_hp, dec_hp = hp.pix2ang(inp.nside, ipix=np.arange(hp.nside2npix(inp.nside)),lonlat=True)
     
     save_dir = f'{inp.output_dir}/results_test/'
-    save_filename_jk_obj = f'jk_obj_test_beta{beta:.3f}.pkl'
+    save_filename_jk_obj = f'jk_obj_test_beta{beta:.3f}_T{T:.3f}.pkl'
 
     # number of patches to divide the full sky on. More of these, better the covariance estimate would be. Just make sure the size of patches is larger than the maximum separation you are interested in.
     njk = 512
-    nthreads = 256//(4*inp.num_beta_vals)
+    nthreads = 256//(4*inp.num_parallel)
     # This is the accuracy setting. If the bin_slop is set to 0.0, it will take longer to run but correlation would be correct. If you want to run it faster, increase the bin_slop to 0.1 or 0.2. This will make the code run faster, but the correlation estimate will be less accurate.
     bin_slop = 0.0
 
@@ -231,12 +234,13 @@ def compute_chi2_harmonic_space(inp, y1, y2, h, cov):
     return chi2, hydiff
 
 
-def compare_chi2(inp, beta, ra_halos, dec_halos, h):
+def compare_chi2(inp, beta, T, ra_halos, dec_halos, h):
     '''
     ARGUMENTS
     ---------
     inp: Info object containing input parameter specifications
     beta: float, value of beta for CIB deprojection
+    T: float, value of Tdust_CIB for CIB deprojection
     ra_halos: ndarray containing ra of halos
     dec_halos: ndarray containing dec of halos
     h: 1D numpy array in RING format containing halo map
@@ -248,21 +252,21 @@ def compare_chi2(inp, beta, ra_halos, dec_halos, h):
     '''
     y_true = hp.read_map(f"{inp.output_dir}/pyilc_outputs/uninflated/needletILCmap_component_tSZ.fits")
     y_true = hp.ud_grade(y_true, inp.nside)
-    y_recon = hp.read_map(f"{inp.output_dir}/pyilc_outputs/beta_{beta:.3f}_uninflated/needletILCmap_component_tSZ_deproject_CIB.fits")
+    y_recon = hp.read_map(f"{inp.output_dir}/pyilc_outputs/beta{beta:.3f}_T{T:.3f}_uninflated/needletILCmap_component_tSZ_deproject_CIB.fits")
     infl_str = 'inflated_realistic' if inp.realistic else 'inflated'
-    y_recon_inflated = hp.read_map(f"{inp.output_dir}/pyilc_outputs/beta_{beta:.3f}_{infl_str}/needletILCmap_component_tSZ_deproject_CIB.fits")
+    y_recon_inflated = hp.read_map(f"{inp.output_dir}/pyilc_outputs/beta{beta:.3f}_T{T:.3f}_{infl_str}/needletILCmap_component_tSZ_deproject_CIB.fits")
     
     if inp.harmonic_space:
         chi2_true, hy_true = compute_chi2_harmonic_space(inp, y_recon, y_true, h, inp.cov_hytrue)
         chi2_inflated, hy_infl = compute_chi2_harmonic_space(inp, y_recon, y_recon_inflated, h, inp.cov_hyinfl)
-        plot_corr_harmonic(inp, beta, hy_true, hy_infl)
+        plot_corr_harmonic(inp, beta, T, hy_true, hy_infl)
     else:   
-        chi2_true, hy_true, r_hy = compute_chi2_real_space(inp, y_recon, y_true, ra_halos, dec_halos, beta, inp.cov_hytrue)
-        chi2_inflated, hy_infl, r_hy = compute_chi2_real_space(inp, y_recon, y_recon_inflated, ra_halos, dec_halos, beta, inp.cov_hyinfl)
-        plot_corr_real(inp, beta, hy_true, hy_infl, r_hy)
+        chi2_true, hy_true, r_hy = compute_chi2_real_space(inp, y_recon, y_true, ra_halos, dec_halos, beta, T, inp.cov_hytrue)
+        chi2_inflated, hy_infl, r_hy = compute_chi2_real_space(inp, y_recon, y_recon_inflated, ra_halos, dec_halos, beta, T, inp.cov_hyinfl)
+        plot_corr_real(inp, beta, T, hy_true, hy_infl, r_hy)
     if inp.debug:
-        print(f'chi2_true for beta={beta}: {chi2_true}', flush=True)
-        print(f'chi2_inflated for beta={beta}: {chi2_inflated}', flush=True)
+        print(f'chi2_true for beta={beta:.3f}, T={T:.3f}: {chi2_true}', flush=True)
+        print(f'chi2_inflated for beta={beta:.3f}, T={T:.3f}: {chi2_inflated}', flush=True)
     return chi2_true, chi2_inflated
 
 
@@ -277,6 +281,6 @@ def compare_chi2_star(args):
 
     RETURNS
     -------
-    function of *args, compare_chi2(inp, beta, ra_halos, dec_halos, h)
+    function of *args, compare_chi2(inp, beta, T, ra_halos, dec_halos, h)
     '''
     return compare_chi2(*args)

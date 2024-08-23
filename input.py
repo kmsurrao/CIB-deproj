@@ -57,6 +57,11 @@ class Info(object):
         self.num_beta_vals = p['num_beta_vals']
         assert type(self.num_beta_vals) is int, "num_beta_vals must be an integer"
         assert self.num_beta_vals >= 1, "num_beta_vals must be at least 1"
+        self.T_range = p['T_range']
+        assert len(self.T_range) == 2, "T_range must consist of two values corresponding to ends of interval"
+        self.num_T_vals = p['num_T_vals']
+        assert type(self.num_T_vals) is int, "num_T_vals must be an integer"
+        assert self.num_T_vals >= 1, "num_T_vals must be at least 1"
         if 'num_parallel' in p:
             self.num_parallel = p['num_parallel']
             assert type(self.num_parallel) is int, "num_parallel must be an integer"

@@ -1,7 +1,6 @@
 import argparse
 import os
 import subprocess
-import numpy as np
 import healpy as hp
 
 from input import Info
@@ -9,7 +8,7 @@ from generate_maps import get_freq_maps
 from utils import *
 
 
-def setup_pyilc(inp, env, beta, suppress_printing=False):
+def setup_pyilc(inp, env, beta, T, suppress_printing=False):
     '''
     Sets up yaml files for pyilc and runs the code
 
@@ -18,6 +17,7 @@ def setup_pyilc(inp, env, beta, suppress_printing=False):
     inp: Info object containing input parameter specifications
     env: environment object
     beta: float, beta value to use for CIB deprojection
+    T: float, Tdust_CIB value to use for CIB deprojection
     suppress_printing: Bool, whether to suppress outputs and errors from pyilc code itself
 
     RETURNS
@@ -28,12 +28,12 @@ def setup_pyilc(inp, env, beta, suppress_printing=False):
     #set up yaml files for pyilc
     
     pyilc_input_params = {}
-    beta_str = f'beta_{beta:.3f}_'
+    sed_str = f'beta{beta:.3f}_T{T:.3f}_'
     pyilc_input_params['output_dir'] = str(inp.output_dir) + f"/moment_deproj/"
 
     pyilc_input_params['output_prefix'] = ""
     pyilc_input_params['save_weights'] = "no"
-    pyilc_input_params['param_dict_file'] = f'{inp.output_dir}/moment_deproj/{beta_str}param_dict.yaml'
+    pyilc_input_params['param_dict_file'] = f'{inp.output_dir}/moment_deproj/{sed_str}param_dict.yaml'
     
     pyilc_input_params['ELLMAX'] = inp.ellmax
     pyilc_input_params['BinSize'] = inp.ells_per_bin
@@ -43,7 +43,7 @@ def setup_pyilc(inp, env, beta, suppress_printing=False):
         pyilc_input_params['wavelet_type'] = "GaussianNeedlets"
         pyilc_input_params['GN_FWHM_arcmin'] = [inp.GN_FWHM_arcmin[i] for i in range(len(inp.GN_FWHM_arcmin))]
         pyilc_input_params['N_scales'] = len(inp.GN_FWHM_arcmin)+1
-    pyilc_input_params['taper_width'] = 200
+    pyilc_input_params['taper_width'] = 100
     
     pyilc_input_params['N_freqs'] = len(inp.frequencies)
     if inp.cib_decorr:
@@ -69,7 +69,7 @@ def setup_pyilc(inp, env, beta, suppress_printing=False):
     pyilc_input_params['N_maps_xcorr'] = 0
     pyilc_input_params['save_as'] = 'fits'
 
-    ymap_yaml = f'{inp.output_dir}/moment_deproj/{beta_str}ymap.yml'
+    ymap_yaml = f'{inp.output_dir}/moment_deproj/{sed_str}ymap.yml'
     with open(ymap_yaml, 'w') as outfile:
         yaml.dump(pyilc_input_params, outfile, default_flow_style=None)
 
@@ -78,7 +78,7 @@ def setup_pyilc(inp, env, beta, suppress_printing=False):
     stderr = subprocess.DEVNULL if suppress_printing else None
     subprocess.run([f"python {inp.pyilc_path}/pyilc/main.py {ymap_yaml}"], shell=True, env=env, stdout=stdout, stderr=stderr)
     if inp.debug:
-        print(f'generated ILC maps for beta={beta:.3f}', flush=True)
+        print(f'generated ILC maps for beta={beta:.3f}, T={T:.3f}', flush=True)
     deproj_str = '_deproject_CIB_CIB_dbeta'
     ymap = hp.read_map(f"{inp.output_dir}/moment_deproj/needletILCmap_component_tSZ{deproj_str}.fits")
     
@@ -110,13 +110,14 @@ def main():
 
     # write beta yaml 
     beta = 1.65
-    pars = {'beta_CIB': float(beta), 'Tdust_CIB': 24.0, 'nu0_CIB_ghz':353.0, 'kT_e_keV':5.0, 'nu0_radio_ghz':150.0, 'beta_radio': -0.5}
-    beta_yaml = f'{inp.output_dir}/moment_deproj/beta_{beta:.3f}_param_dict.yaml'
-    with open(beta_yaml, 'w') as outfile:
+    T = 24.0
+    pars = {'beta_CIB': float(beta), 'Tdust_CIB': float(T), 'nu0_CIB_ghz':353.0, 'kT_e_keV':5.0, 'nu0_radio_ghz':150.0, 'beta_radio': -0.5}
+    sed_yaml = f'{inp.output_dir}/moment_deproj/beta{beta:.3f}_T{T:.3f}_param_dict.yaml'
+    with open(sed_yaml, 'w') as outfile:
         yaml.dump(pars, outfile, default_flow_style=None)
 
     # get y-map
-    ymap = setup_pyilc(inp, env, beta, suppress_printing=False)
+    ymap = setup_pyilc(inp, env, beta, T, suppress_printing=False)
 
     return
 
