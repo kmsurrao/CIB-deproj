@@ -55,7 +55,7 @@ def main():
     T_arr = np.linspace(inp.T_range[0], inp.T_range[1], num=inp.num_T_vals, endpoint=False)  
     pool = mp.Pool(inp.num_parallel)
     inputs = [(inp, env, beta, T) for beta, T in list(itertools.product(beta_arr,T_arr))]
-    _ = list(tqdm.tqdm(pool.imap(get_all_ymaps_star, inputs), total=len(beta_arr)))
+    _ = list(tqdm.tqdm(pool.imap(get_all_ymaps_star, inputs), total=len(beta_arr)*len(T_arr)))
     pool.close()
     
 
