@@ -10,6 +10,7 @@ from halo2map import halodir2map, halofile2map
 from cross_corr import cov, compare_chi2_star
 from get_y_map import get_all_ymaps_star, setup_pyilc
 from generate_maps import get_freq_maps
+from harmonic_ilc import HILC_map
 from utils import *
 
 
@@ -43,11 +44,16 @@ def main():
     standard_ILC_file = f'{inp.output_dir}/pyilc_outputs/uninflated/needletILCmap_component_tSZ.fits'
     if not os.path.isfile(standard_ILC_file):
         get_freq_maps(inp, diff_noise=False, no_cib=True)
-        setup_pyilc(inp, env, 1.0, suppress_printing=True, inflated=False, \
-                    standard_ilc=True, no_cib=True)
+        if inp.ILC_type == 'needlet':
+            setup_pyilc(inp, env, 1.0, suppress_printing=True, inflated=False, \
+                        standard_ilc=True, no_cib=True)
+        else:
+            delta_bandpasses = False if inp.cib_decorr else True
+            signal_sed = tsz_spectral_response(inp.frequencies, delta_bandpasses=delta_bandpasses, inp=inp)
+            HILC_map(inp, 1.0, signal_sed, contam_sed=None, inflated=False, no_cib=True)
 
 
-    # Build y-maps with pyilc (deprojecting beta)
+    # Build ILC y-maps (deprojecting beta)
     print('Building y-maps...', flush=True)
     beta_arr = np.linspace(inp.beta_range[0], inp.beta_range[1], num=inp.num_beta_vals, endpoint=False) 
     pool = mp.Pool(inp.num_parallel)

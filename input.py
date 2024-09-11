@@ -63,7 +63,7 @@ class Info(object):
             assert self.num_parallel >= 1, "num_parallel must be at least 1"
         else:
             self.num_parallel = 1
-        self.cib_inflation = p['cib_inflation']
+        self.alpha = p['alpha']
         self.noise_type = p['noise_type']
         assert self.noise_type in {'Planck_no_beam', 'Planck_with_beam', 'SO'}, "Currently the only supported noise types are 'Planck_no_beam', 'Planck_with_beam', and 'SO'"
         if 'noise_fraction' in p:

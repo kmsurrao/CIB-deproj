@@ -96,7 +96,7 @@ def tsz_delta_sed(freq):
     '''
     ARGUMENTS
     ---------
-    freqs: float, frequency (GHz) for which to calculate tSZ spectral response in a delta bandpass
+    freq: float, frequency (GHz) for which to calculate tSZ spectral response in a delta bandpass
 
     RETURNS
     ---------
@@ -139,15 +139,16 @@ def tsz_spectral_response(freqs, delta_bandpasses=True, inp=None):
     return np.array(response)
 
 
-def cib_spectral_response(freqs):
+def cib_delta_sed(freq, beta=1.65):
     '''
     ARGUMENTS
     ---------
-    freqs: 1D numpy array, contains frequencies (GHz) for which to calculate tSZ spectral response
+    freq: float, frequency (GHz) for which to calculate CIB spectral response in a delta bandpass
+    beta: float, value of beta for CIB SED 
 
     RETURNS
     ---------
-    1D array containing CIB spectral response to each frequency (units of K_CMB)
+    sed: float, CIB spectral response to freq (units of K_CMB)
     '''
     TCMB = 2.726 #Kelvin
     TCMB_uK = 2.726e6 #micro-Kelvin
@@ -173,14 +174,45 @@ def cib_spectral_response(freqs):
     beta_CIB = 1.65         #CIB modified blackbody spectral index (Table 9 of http://www.aanda.org/articles/aa/pdf/2014/11/aa22093-13.pdf ; Table 10 of that paper contains CIB monopoles)
     nu0_CIB_ghz = 353.0    #CIB pivot frequency [GHz]
 
-    nu_ghz = freqs
+    nu_ghz = [freq]
     nu = 1.e9*np.asarray(nu_ghz).astype(float)
     X_CIB = hplanck*nu/(kboltz*Tdust_CIB)
     nu0_CIB = nu0_CIB_ghz*1.e9
     X0_CIB = hplanck*nu0_CIB/(kboltz*Tdust_CIB)
     resp = (nu/nu0_CIB)**(3.0+(beta_CIB)) * ((np.exp(X0_CIB) - 1.0) / (np.exp(X_CIB) - 1.0)) * (ItoDeltaT(np.asarray(nu_ghz).astype(float))/ItoDeltaT(nu0_CIB_ghz))
     resp[np.where(nu_ghz == None)] = 0. #this case is appropriate for HI or other maps that contain no CMB-relevant signals (and also no CIB); they're assumed to be denoted by None in nu_ghz
-    return resp
+    sed = resp[0]
+    return sed
+
+
+def cib_spectral_response(freqs, delta_bandpasses=True, inp=None, beta=1.65):
+    '''
+    ARGUMENTS
+    ---------
+    freqs: array-like, contains frequencies (GHz) for which to calculate CIB spectral response
+    delta_bandpasses: Bool, if True, returns SED at freqs with Delta bandpasses;
+        if False, returns SED evaluated at actual Planck bandpasses
+    inp: If delta_bandpasses=False, must provide inp (Info object containing input parameter specifications)
+    beta: float, value of beta for CIB SED
+
+    RETURNS
+    ---------
+    1D array containing CIB spectral response to each frequency (units of K_CMB)
+    '''
+    if not delta_bandpasses:
+        assert inp is not None, "cib_spectral_response requires argument 'inp' if delta_bandpasses==False"
+    response = []
+    for freq in freqs:
+        if delta_bandpasses:
+            response.append(cib_delta_sed(freq, beta))
+        else:
+            bp_path = f'{inp.pyilc_path}/data/HFI_BANDPASS_F{int(freq)}_reformat.txt'
+            nu_ghz, trans = np.loadtxt(bp_path, usecols=(0,1), unpack=True)
+            delta_resp = np.array([cib_delta_sed(n, beta) for n in nu_ghz])
+            vnorm = np.trapz(trans * dBnudT(nu_ghz), nu_ghz)
+            val = np.trapz(trans * delta_resp , nu_ghz) / vnorm
+            response.append(val) #K_CMB
+    return np.array(response)
 
 
 def binned(inp, spectrum):

@@ -3,6 +3,8 @@ import yaml
 import healpy as hp
 import os
 from generate_maps import get_realistic_infl_maps
+from harmonic_ilc import HILC_map
+from utils import tsz_spectral_response, cib_spectral_response
 
 
 def setup_pyilc(inp, env, beta, suppress_printing=False, inflated=False, standard_ilc=False, no_cib=False):
@@ -125,13 +127,25 @@ def get_all_ymaps(inp, env, beta):
     '''
     y_recon_file = f"{inp.output_dir}/pyilc_outputs/beta_{beta:.3f}_uninflated/needletILCmap_component_tSZ_deproject_CIB.fits"
     if not os.path.isfile(y_recon_file):
-        setup_pyilc(inp, env, beta, inflated=False, suppress_printing=(not inp.debug))
+        if inp.ILC_type == 'needlet':
+            setup_pyilc(inp, env, beta, inflated=False, suppress_printing=(not inp.debug))
+        else:
+            delta_bandpasses = False if inp.cib_decorr else True
+            tsz_sed = tsz_spectral_response(inp.frequencies, delta_bandpasses=delta_bandpasses, inp=inp)
+            cib_sed = cib_spectral_response(inp.frequencies, delta_bandpasses=delta_bandpasses, inp=inp)
+            HILC_map(inp, beta, tsz_sed, contam_sed=cib_sed, inflated=False)
     infl_str = 'inflated_realistic' if inp.realistic else 'inflated'
     y_recon_infl_file = f"{inp.output_dir}/pyilc_outputs/beta_{beta:.3f}_{infl_str}/needletILCmap_component_tSZ_deproject_CIB.fits"
     if not os.path.isfile(y_recon_infl_file):
         if inp.realistic:
             get_realistic_infl_maps(inp, beta)
-        setup_pyilc(inp, env, beta, inflated=True, suppress_printing=(not inp.debug))
+        if inp.ILC_type == 'needlet':
+            setup_pyilc(inp, env, beta, inflated=True, suppress_printing=(not inp.debug))
+        else:
+            delta_bandpasses = False if inp.cib_decorr else True
+            tsz_sed = tsz_spectral_response(inp.frequencies, delta_bandpasses=delta_bandpasses, inp=inp)
+            cib_sed = cib_spectral_response(inp.frequencies, delta_bandpasses=delta_bandpasses, inp=inp)
+            HILC_map(inp, beta, tsz_sed, contam_sed = (cib_sed**2 + cib_sed), inflated=True)
     return 1
 
 

@@ -27,7 +27,7 @@ frequencies: [100, 143, 217, 353, 545]
 components: ['tSZ', 'CIB', 'CMB', 'kSZ']
 
 # ILC type (either 'harmonic' or 'needlet')
-ILC_type: 'needlet'
+ILC_type: 'harmonic'
 
 # If ILC_type is 'needlet', array of FWHM (arcmin) used for constrution 
 # of Gaussians. (needlet filters are differences of two Gaussians). 
@@ -49,8 +49,8 @@ num_beta_vals: 20
 # if this input is not provided, no parallelization is assumed (num_parallel=1)
 num_parallel: 10
 
-# factors by which to inflate CIB and deproject for comparison
-cib_inflation: [1.0, 10.0]
+# factors by which to inflate residual and deproject for comparison
+alpha: 10.0
 
 # type of noise to use (currently only supports 'Planck_no_beam', 'Planck_with_beam' or 'SO')
 noise_type: 'Planck_no_beam'
@@ -104,7 +104,7 @@ halo_catalog: '/scratch/09334/ksurrao/halo_files/haloslc_agora_zsel_0.8_to_1.8_M
 pyilc_path: '/work2/09334/ksurrao/stampede3/Github/pyilc'
 
 # directory in which to save outputs
-output_dir: '/scratch/09334/ksurrao/cib_deproj_fixed_bandpasses/planck_1p0noise_nocibdecorr'
+output_dir: '/scratch/09334/ksurrao/cib_deproj_fixed_bandpasses/planck_1p0noise_nocibdecorr_deprojsum'
 
 # If debug is True, there will be more intermediate printing
 debug: False
