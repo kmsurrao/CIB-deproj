@@ -132,7 +132,7 @@ def get_all_ymaps(inp, env, beta):
         else:
             delta_bandpasses = False if inp.cib_decorr else True
             tsz_sed = tsz_spectral_response(inp.frequencies, delta_bandpasses=delta_bandpasses, inp=inp)
-            cib_sed = cib_spectral_response(inp.frequencies, delta_bandpasses=delta_bandpasses, inp=inp)
+            cib_sed = cib_spectral_response(inp.frequencies, delta_bandpasses=delta_bandpasses, inp=inp, beta=beta)
             HILC_map(inp, beta, tsz_sed, contam_sed=cib_sed, inflated=False)
     infl_str = 'inflated_realistic' if inp.realistic else 'inflated'
     y_recon_infl_file = f"{inp.output_dir}/pyilc_outputs/beta_{beta:.3f}_{infl_str}/needletILCmap_component_tSZ_deproject_CIB.fits"
@@ -144,7 +144,7 @@ def get_all_ymaps(inp, env, beta):
         else:
             delta_bandpasses = False if inp.cib_decorr else True
             tsz_sed = tsz_spectral_response(inp.frequencies, delta_bandpasses=delta_bandpasses, inp=inp)
-            cib_sed = cib_spectral_response(inp.frequencies, delta_bandpasses=delta_bandpasses, inp=inp)
+            cib_sed = cib_spectral_response(inp.frequencies, delta_bandpasses=delta_bandpasses, inp=inp, beta=beta)
             HILC_map(inp, beta, tsz_sed, contam_sed = (cib_sed**2 + cib_sed), inflated=True)
     return 1
 

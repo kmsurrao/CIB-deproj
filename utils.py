@@ -171,7 +171,7 @@ def cib_delta_sed(freq, beta=1.65):
         return 1./dBnudT(nu_ghz)
 
     Tdust_CIB = 24.0       #CIB effective dust temperature [K] (Table 9 of http://www.aanda.org/articles/aa/pdf/2014/11/aa22093-13.pdf)
-    beta_CIB = 1.65         #CIB modified blackbody spectral index (Table 9 of http://www.aanda.org/articles/aa/pdf/2014/11/aa22093-13.pdf ; Table 10 of that paper contains CIB monopoles)
+    beta_CIB = beta         #CIB modified blackbody spectral index (Table 9 of http://www.aanda.org/articles/aa/pdf/2014/11/aa22093-13.pdf ; Table 10 of that paper contains CIB monopoles)
     nu0_CIB_ghz = 353.0    #CIB pivot frequency [GHz]
 
     nu_ghz = [freq]

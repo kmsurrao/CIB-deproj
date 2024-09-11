@@ -43,7 +43,7 @@ cib_decorr: False
 beta_range: [1.6, 1.7]
 
 # number of beta values to test
-num_beta_vals: 20
+num_beta_vals: 10
 
 # number of beta values to test in parallel
 # if this input is not provided, no parallelization is assumed (num_parallel=1)

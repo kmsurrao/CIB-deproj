@@ -135,7 +135,7 @@ def get_freq_maps(inp, diff_noise=False, no_cib=False):
             freq_map_uninflated = tsz_map + noise1_map + additional_maps
             map_name = f'{inp.output_dir}/maps/no_cib_{freq}.fits'
         else:
-            freq_map_uninflated = tsz_map + inp.cib_inflation[0]*cib_map + noise1_map + additional_maps
+            freq_map_uninflated = tsz_map + cib_map + noise1_map + additional_maps
             map_name = f'{inp.output_dir}/maps/uninflated_{freq}.fits'
 
         # filter out low ell modes
