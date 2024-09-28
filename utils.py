@@ -139,16 +139,17 @@ def tsz_spectral_response(freqs, delta_bandpasses=True, inp=None):
     return np.array(response)
 
 
-def cib_delta_sed(freq, beta=1.65):
+def cib_delta_sed(freq, beta=1.65, jy_sr=False):
     '''
     ARGUMENTS
     ---------
     freq: float, frequency (GHz) for which to calculate CIB spectral response in a delta bandpass
     beta: float, value of beta for CIB SED 
+    jy_sr: Bool, whether to compute SED in Jy/sr
 
     RETURNS
     ---------
-    sed: float, CIB spectral response to freq (units of K_CMB)
+    sed: float, CIB spectral response to freq (units of K_CMB if jy_sr is False, otherwise in Jy/sr)
     '''
     TCMB = 2.726 #Kelvin
     TCMB_uK = 2.726e6 #micro-Kelvin
@@ -179,13 +180,15 @@ def cib_delta_sed(freq, beta=1.65):
     X_CIB = hplanck*nu/(kboltz*Tdust_CIB)
     nu0_CIB = nu0_CIB_ghz*1.e9
     X0_CIB = hplanck*nu0_CIB/(kboltz*Tdust_CIB)
-    resp = (nu/nu0_CIB)**(3.0+(beta_CIB)) * ((np.exp(X0_CIB) - 1.0) / (np.exp(X_CIB) - 1.0)) * (ItoDeltaT(np.asarray(nu_ghz).astype(float))/ItoDeltaT(nu0_CIB_ghz))
+    resp = (nu/nu0_CIB)**(3.0+(beta_CIB)) * ((np.exp(X0_CIB) - 1.0) / (np.exp(X_CIB) - 1.0))
+    if not jy_sr:
+        resp *= (ItoDeltaT(np.asarray(nu_ghz).astype(float))/ItoDeltaT(nu0_CIB_ghz))
     resp[np.where(nu_ghz == None)] = 0. #this case is appropriate for HI or other maps that contain no CMB-relevant signals (and also no CIB); they're assumed to be denoted by None in nu_ghz
     sed = resp[0]
     return sed
 
 
-def cib_spectral_response(freqs, delta_bandpasses=True, inp=None, beta=1.65):
+def cib_spectral_response(freqs, delta_bandpasses=True, inp=None, beta=1.65, jy_sr=False):
     '''
     ARGUMENTS
     ---------
@@ -194,6 +197,7 @@ def cib_spectral_response(freqs, delta_bandpasses=True, inp=None, beta=1.65):
         if False, returns SED evaluated at actual Planck bandpasses
     inp: If delta_bandpasses=False, must provide inp (Info object containing input parameter specifications)
     beta: float, value of beta for CIB SED
+    jy_sr: Bool, whether to compute SED in Jy/sr
 
     RETURNS
     ---------
@@ -204,14 +208,14 @@ def cib_spectral_response(freqs, delta_bandpasses=True, inp=None, beta=1.65):
     response = []
     for freq in freqs:
         if delta_bandpasses:
-            response.append(cib_delta_sed(freq, beta))
+            response.append(cib_delta_sed(freq, beta, jy_sr))
         else:
             bp_path = f'{inp.pyilc_path}/data/HFI_BANDPASS_F{int(freq)}_reformat.txt'
             nu_ghz, trans = np.loadtxt(bp_path, usecols=(0,1), unpack=True)
-            delta_resp = np.array([cib_delta_sed(n, beta) for n in nu_ghz])
+            delta_resp = np.array([cib_delta_sed(n, beta, True) for n in nu_ghz])
             vnorm = np.trapz(trans * dBnudT(nu_ghz), nu_ghz)
             val = np.trapz(trans * delta_resp , nu_ghz) / vnorm
-            response.append(val) #K_CMB
+            response.append(val) #K_CMB if jy_sr is False
     return np.array(response)
 
 

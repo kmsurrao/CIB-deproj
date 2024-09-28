@@ -176,7 +176,7 @@ def get_realistic_infl_maps(inp, beta):
     for i, freq in enumerate(inp.frequencies):
         orig_freq_map = hp.read_map(f'{inp.output_dir}/maps/uninflated_{freq}.fits')
         residual = orig_freq_map - tsz_sed_vec[i]*ymap
-        infl_map = orig_freq_map + inp.alpha*residual*cib_sed_vec[i]
+        infl_map = orig_freq_map + inp.alpha*residual*tsz_sed_vec[i]**2
         hp.write_map(f'{inp.output_dir}/maps/inflated_realistic_{freq}_{beta:.3f}.fits', infl_map, overwrite=True, dtype=np.float32)
         if inp.debug:
             print(f'saved {inp.output_dir}/maps/inflated_realistic_{freq}_{beta:.3f}.fits', flush=True)

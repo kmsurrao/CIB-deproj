@@ -2,9 +2,9 @@ import subprocess
 import yaml
 import healpy as hp
 import os
-from generate_maps import get_realistic_infl_maps
 from harmonic_ilc import HILC_map
-from utils import tsz_spectral_response, cib_spectral_response
+from generate_maps import *
+from utils import *
 
 
 def setup_pyilc(inp, env, beta, suppress_printing=False, inflated=False, standard_ilc=False, no_cib=False):
@@ -132,7 +132,7 @@ def get_all_ymaps(inp, env, beta):
         else:
             delta_bandpasses = False if inp.cib_decorr else True
             tsz_sed = tsz_spectral_response(inp.frequencies, delta_bandpasses=delta_bandpasses, inp=inp)
-            cib_sed = cib_spectral_response(inp.frequencies, delta_bandpasses=delta_bandpasses, inp=inp, beta=beta)
+            cib_sed = cib_spectral_response(inp.frequencies, delta_bandpasses=delta_bandpasses, inp=inp, beta=beta, jy_sr=True)
             HILC_map(inp, beta, tsz_sed, contam_sed=cib_sed, inflated=False)
     infl_str = 'inflated_realistic' if inp.realistic else 'inflated'
     y_recon_infl_file = f"{inp.output_dir}/pyilc_outputs/beta_{beta:.3f}_{infl_str}/needletILCmap_component_tSZ_deproject_CIB.fits"
@@ -144,8 +144,8 @@ def get_all_ymaps(inp, env, beta):
         else:
             delta_bandpasses = False if inp.cib_decorr else True
             tsz_sed = tsz_spectral_response(inp.frequencies, delta_bandpasses=delta_bandpasses, inp=inp)
-            cib_sed = cib_spectral_response(inp.frequencies, delta_bandpasses=delta_bandpasses, inp=inp, beta=beta)
-            HILC_map(inp, beta, tsz_sed, contam_sed = (cib_sed**2 + cib_sed), inflated=True)
+            cib_sed = cib_spectral_response(inp.frequencies, delta_bandpasses=delta_bandpasses, inp=inp, beta=beta, jy_sr=True)
+            HILC_map(inp, beta, tsz_sed, contam_sed = (inp.alpha*cib_sed*tsz_sed**2 + cib_sed), inflated=True)
     return 1
 
 
@@ -163,3 +163,38 @@ def get_all_ymaps_star(args):
     function of *args, get_all_ymaps(inp, env, beta)
     '''
     return get_all_ymaps(*args)
+
+
+if __name__ == '__main__':
+
+    # for testing
+    import argparse
+    from input import Info
+    from halo2map import halodir2map, halofile2map
+
+
+    # main input file containing most specifications 
+    parser = argparse.ArgumentParser(description="Optimal beta value for CIB deprojection.")
+    parser.add_argument("--config", default="example.yaml")
+    args = parser.parse_args()
+    input_file = args.config
+
+    # read in the input file and set up relevant info object
+    inp = Info(input_file)
+
+    # set up output directory
+    env = os.environ.copy()
+    setup_output_dir(inp, env)
+    
+    # get map of halos and maps at each frequency (both with and without inflated CIB)
+    if inp.halo_catalog is not None:                                                  
+        h, ra_halos, dec_halos = halofile2map(inp)
+    else:
+        h, ra_halos, dec_halos = halodir2map(inp)
+    print('got ra and dec of halos', flush=True)
+    print('Getting maps at different frequencies...', flush=True)
+    get_freq_maps(inp, diff_noise=False, no_cib=False)
+
+    # test pyilc
+    beta = 1.600
+    setup_pyilc(inp, env, beta, suppress_printing=False, inflated=False, standard_ilc=False, no_cib=False)
