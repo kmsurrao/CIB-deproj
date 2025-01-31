@@ -145,7 +145,10 @@ def get_all_ymaps(inp, env, beta):
             delta_bandpasses = False if inp.cib_decorr else True
             tsz_sed = tsz_spectral_response(inp.frequencies, delta_bandpasses=delta_bandpasses, inp=inp)
             cib_sed = cib_spectral_response(inp.frequencies, delta_bandpasses=delta_bandpasses, inp=inp, beta=beta, jy_sr=True)
-            HILC_map(inp, beta, tsz_sed, contam_sed = (inp.alpha*cib_sed*tsz_sed**2 + cib_sed), inflated=True)
+            h_vec = [1]*len(inp.frequencies)
+            h_vec[0] = -1 - 2*sum(tsz_sed[1:])/tsz_sed[0]
+            contam_sed = (cib_sed + h_vec*cib_sed - h_vec*tsz_sed)
+            HILC_map(inp, beta, tsz_sed, contam_sed = contam_sed, inflated=True)
     return 1
 
 

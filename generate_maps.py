@@ -173,10 +173,12 @@ def get_realistic_infl_maps(inp, beta):
     delta_bandpasses = True if not inp.cib_decorr else False
     tsz_sed_vec = tsz_spectral_response(inp.frequencies, delta_bandpasses = delta_bandpasses, inp=inp)
     cib_sed_vec = cib_spectral_response(inp.frequencies, delta_bandpasses = delta_bandpasses, inp=inp, beta=beta)
+    h_vec = [1]*len(inp.frequencies)
+    h_vec[0] = -1 - 2*sum(tsz_sed_vec[1:])/tsz_sed_vec[0]
     for i, freq in enumerate(inp.frequencies):
         orig_freq_map = hp.read_map(f'{inp.output_dir}/maps/uninflated_{freq}.fits')
         residual = orig_freq_map - tsz_sed_vec[i]*ymap
-        infl_map = orig_freq_map + inp.alpha*residual*tsz_sed_vec[i]**2
+        infl_map = orig_freq_map + h_vec[i]*residual
         hp.write_map(f'{inp.output_dir}/maps/inflated_realistic_{freq}_{beta:.3f}.fits', infl_map, overwrite=True, dtype=np.float32)
         if inp.debug:
             print(f'saved {inp.output_dir}/maps/inflated_realistic_{freq}_{beta:.3f}.fits', flush=True)
