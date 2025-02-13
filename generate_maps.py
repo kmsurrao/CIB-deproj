@@ -3,7 +3,7 @@ import numpy as np
 from scipy import interpolate
 from planck_noise import get_planck_noise, get_planck_specs
 from inpaint_pixels import initial_masking
-from utils import tsz_spectral_response, cib_spectral_response, dbeta_spectral_response
+from utils import tsz_spectral_response, cib_spectral_response
 
 
 def filter_low_ell(map_, ellmin):
@@ -172,8 +172,8 @@ def get_realistic_infl_maps(inp, beta):
     ymap = hp.read_map(f"{inp.output_dir}/pyilc_outputs/beta_{beta:.3f}_uninflated/needletILCmap_component_tSZ_deproject_CIB.fits")
     delta_bandpasses = True if not inp.cib_decorr else False
     tsz_sed_vec = tsz_spectral_response(inp.frequencies, delta_bandpasses = delta_bandpasses, inp=inp)
-    h_vec = [1]*len(inp.frequencies)
-    h_vec[0] = -sum(tsz_sed_vec[1:]**2)/(tsz_sed_vec[0]**2)
+    h_vec = [inp.alpha]*len(inp.frequencies)
+    h_vec[-1] = -inp.alpha*sum(tsz_sed_vec[:len(tsz_sed_vec)]**2)/(tsz_sed_vec[-1]**2)
     for i, freq in enumerate(inp.frequencies):
         orig_freq_map = hp.read_map(f'{inp.output_dir}/maps/uninflated_{freq}.fits')
         residual = orig_freq_map - tsz_sed_vec[i]*ymap

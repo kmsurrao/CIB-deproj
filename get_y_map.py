@@ -1,6 +1,7 @@
 import subprocess
 import yaml
 import healpy as hp
+import numpy as np
 import os
 from harmonic_ilc import HILC_map
 from generate_maps import *
@@ -132,7 +133,7 @@ def get_all_ymaps(inp, env, beta):
         else:
             delta_bandpasses = False if inp.cib_decorr else True
             tsz_sed = tsz_spectral_response(inp.frequencies, delta_bandpasses=delta_bandpasses, inp=inp)
-            cib_sed = cib_spectral_response(inp.frequencies, delta_bandpasses=delta_bandpasses, inp=inp, beta=beta, jy_sr=False)
+            cib_sed = cib_spectral_response(inp.frequencies, delta_bandpasses=delta_bandpasses, inp=inp, beta=beta)
             HILC_map(inp, beta, tsz_sed, contam_sed=cib_sed, inflated=False)
     infl_str = 'inflated_realistic' if inp.realistic else 'inflated'
     y_recon_infl_file = f"{inp.output_dir}/pyilc_outputs/beta_{beta:.3f}_{infl_str}/needletILCmap_component_tSZ_deproject_CIB.fits"
@@ -144,9 +145,9 @@ def get_all_ymaps(inp, env, beta):
         else:
             delta_bandpasses = False if inp.cib_decorr else True
             tsz_sed = tsz_spectral_response(inp.frequencies, delta_bandpasses=delta_bandpasses, inp=inp)
-            cib_sed = cib_spectral_response(inp.frequencies, delta_bandpasses=delta_bandpasses, inp=inp, beta=beta, jy_sr=False)
-            h_vec = [1]*len(inp.frequencies)
-            h_vec[0] = -sum(tsz_sed[1:]**2)/(tsz_sed[0]**2)
+            cib_sed = cib_spectral_response(inp.frequencies, delta_bandpasses=delta_bandpasses, inp=inp, beta=beta)
+            h_vec = inp.alpha*np.ones_like(inp.frequencies, dtype=np.float32)
+            h_vec[-1] = -inp.alpha*sum(tsz_sed[:len(tsz_sed)]**2)/(tsz_sed[-1]**2)
             contam_sed = cib_sed*(1+h_vec)
             HILC_map(inp, beta, tsz_sed, contam_sed = contam_sed, inflated=True)
     return 1

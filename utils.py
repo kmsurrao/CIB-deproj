@@ -199,7 +199,7 @@ def cib_delta_sed(freq, beta=1.65, jy_sr=False):
     return sed
 
 
-def cib_spectral_response(freqs, delta_bandpasses=True, inp=None, beta=1.65, jy_sr=False):
+def cib_spectral_response(freqs, delta_bandpasses=True, inp=None, beta=1.65):
     '''
     ARGUMENTS
     ---------
@@ -208,7 +208,6 @@ def cib_spectral_response(freqs, delta_bandpasses=True, inp=None, beta=1.65, jy_
         if False, returns SED evaluated at actual Planck bandpasses
     inp: If delta_bandpasses=False, must provide inp (Info object containing input parameter specifications)
     beta: float, value of beta for CIB SED
-    jy_sr: Bool, whether to compute SED in Jy/sr
 
     RETURNS
     ---------
@@ -219,14 +218,14 @@ def cib_spectral_response(freqs, delta_bandpasses=True, inp=None, beta=1.65, jy_
     response = []
     for freq in freqs:
         if delta_bandpasses:
-            response.append(cib_delta_sed(freq, beta, jy_sr))
+            response.append(cib_delta_sed(freq, beta, False)) # CMB thermodynamic temperature units
         else:
             bp_path = f'{inp.pyilc_path}/data/HFI_BANDPASS_F{int(freq)}_reformat.txt'
             nu_ghz, trans = np.loadtxt(bp_path, usecols=(0,1), unpack=True)
-            delta_resp = np.array([cib_delta_sed(n, beta, True) for n in nu_ghz])
+            delta_resp = np.array([cib_delta_sed(n, beta, True) for n in nu_ghz]) # Jy/sr
             vnorm = np.trapz(trans * dBnudT(nu_ghz), nu_ghz)
             val = np.trapz(trans * delta_resp , nu_ghz) / vnorm
-            response.append(val) #K_CMB if jy_sr is False
+            response.append(val) # CMB thermodynamic temperature units
     return np.array(response)
 
 
@@ -259,7 +258,7 @@ def dbeta_delta_sed(freq, beta=1.65, jy_sr=False):
     return sed
 
 
-def dbeta_spectral_response(freqs, delta_bandpasses=True, inp=None, beta=1.65, jy_sr=False):
+def dbeta_spectral_response(freqs, delta_bandpasses=True, inp=None, beta=1.65):
     '''
     ARGUMENTS
     ---------
@@ -268,7 +267,6 @@ def dbeta_spectral_response(freqs, delta_bandpasses=True, inp=None, beta=1.65, j
         if False, returns SED evaluated at actual Planck bandpasses
     inp: If delta_bandpasses=False, must provide inp (Info object containing input parameter specifications)
     beta: float, value of beta for CIB SED
-    jy_sr: Bool, whether to compute SED in Jy/sr
 
     RETURNS
     ---------
@@ -280,7 +278,7 @@ def dbeta_spectral_response(freqs, delta_bandpasses=True, inp=None, beta=1.65, j
     response = []
     for freq in freqs:
         if delta_bandpasses:
-            response.append(dbeta_delta_sed(freq, beta, jy_sr))
+            response.append(dbeta_delta_sed(freq, beta, False))
         else:
             bp_path = f'{inp.pyilc_path}/data/HFI_BANDPASS_F{int(freq)}_reformat.txt'
             nu_ghz, trans = np.loadtxt(bp_path, usecols=(0,1), unpack=True)
