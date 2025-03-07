@@ -43,7 +43,7 @@ def setup_pyilc(inp, env, beta, suppress_printing=False):
         pyilc_input_params['wavelet_type'] = "GaussianNeedlets"
         pyilc_input_params['GN_FWHM_arcmin'] = [inp.GN_FWHM_arcmin[i] for i in range(len(inp.GN_FWHM_arcmin))]
         pyilc_input_params['N_scales'] = len(inp.GN_FWHM_arcmin)+1
-    pyilc_input_params['taper_width'] = 200
+    pyilc_input_params['taper_width'] = 0
     
     pyilc_input_params['N_freqs'] = len(inp.frequencies)
     if inp.cib_decorr:
@@ -109,7 +109,7 @@ def main():
     get_freq_maps(inp, diff_noise=False, no_cib=False)
 
     # write beta yaml 
-    beta = 1.65
+    beta = 1.69
     pars = {'beta_CIB': float(beta), 'Tdust_CIB': 24.0, 'nu0_CIB_ghz':353.0, 'kT_e_keV':5.0, 'nu0_radio_ghz':150.0, 'beta_radio': -0.5}
     beta_yaml = f'{inp.output_dir}/moment_deproj/beta_{beta:.3f}_param_dict.yaml'
     with open(beta_yaml, 'w') as outfile:
