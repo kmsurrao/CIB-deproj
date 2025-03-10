@@ -8,10 +8,17 @@ import matplotlib.pyplot as plt
 from input import Info
 from halo2map import halodir2map, halofile2map
 from cross_corr import cov, compare_chi2_star
-from get_y_map import get_all_ymaps_star, setup_pyilc
+from get_y_map import get_all_ymaps_star
 from generate_maps import get_freq_maps
 from harmonic_ilc import HILC_map
+from beta_per_bin import get_all_1sigma_beta, predict_with_uncertainty
 from utils import *
+plt.rcParams.update({
+     'text.usetex': True,
+     'font.family': 'serif',
+     'font.sans-serif': ['Computer Modern'],
+     'font.size'   : 20})
+plt.rc_context({'axes.autolimit_mode': 'round_numbers'})
 
 
 def main():
@@ -31,42 +38,37 @@ def main():
     
     # get map of halos and maps at each frequency (both with and without inflated CIB)
     if inp.halo_catalog is not None:                                                  
-        h, ra_halos, dec_halos = halofile2map(inp)
+        h = halofile2map(inp)
     else:
-        h, ra_halos, dec_halos = halodir2map(inp)
-    print('got ra and dec of halos', flush=True)
+        h = halodir2map(inp)
+    print('got halo map', flush=True)
     print('Getting maps at different frequencies...', flush=True)
-    get_freq_maps(inp, diff_noise=False, no_cib=False)
+    get_freq_maps(inp, no_cib=False)
 
 
     # Build standard ILC y-map (from maps with no CIB)
     print('Building standard ILC y-map from freq. maps without CIB...', flush=True)
     standard_ILC_file = f'{inp.output_dir}/pyilc_outputs/uninflated/needletILCmap_component_tSZ.fits'
     if not os.path.isfile(standard_ILC_file):
-        get_freq_maps(inp, diff_noise=False, no_cib=True)
-        if inp.ILC_type == 'needlet':
-            setup_pyilc(inp, env, 1.0, suppress_printing=True, inflated=False, \
-                        standard_ilc=True, no_cib=True)
-        else:
-            delta_bandpasses = False if inp.cib_decorr else True
-            signal_sed = tsz_spectral_response(inp.frequencies, delta_bandpasses=delta_bandpasses, inp=inp)
-            HILC_map(inp, 1.0, signal_sed, contam_sed=None, inflated=False, no_cib=True)
+        get_freq_maps(inp, no_cib=True)
+        delta_bandpasses = False if inp.cib_decorr else True
+        signal_sed = tsz_spectral_response(inp.frequencies, delta_bandpasses=delta_bandpasses, inp=inp)
+        HILC_map(inp, 1.0, signal_sed, contam_sed=None, inflated=False, no_cib=True)
 
 
     # Build ILC y-maps (deprojecting beta)
     print('Building y-maps...', flush=True)
-    beta_arr = np.linspace(inp.beta_range[0], inp.beta_range[1], num=inp.num_beta_vals, endpoint=False) 
     pool = mp.Pool(inp.num_parallel)
-    inputs = [(inp, env, beta) for beta in beta_arr]
-    _ = list(tqdm.tqdm(pool.imap(get_all_ymaps_star, inputs), total=len(beta_arr)))
+    inputs = [(inp, beta) for beta in inp.beta_arr]
+    _ = list(tqdm.tqdm(pool.imap(get_all_ymaps_star, inputs), total=len(inp.beta_arr)))
     pool.close()
     
 
     # Compute covariance matrix
-    mean_beta = beta_arr[len(beta_arr)//2]
+    mean_beta = inp.beta_arr[len(inp.beta_arr)//2]
     print(f'\nComputing covariance matrix using beta={mean_beta:0.3f}...', flush=True)
-    inp.cov_hytrue = cov(inp, mean_beta, ra_halos, dec_halos, h, inflated=False) 
-    inp.cov_hyinfl = cov(inp, mean_beta, ra_halos, dec_halos, h, inflated=True) 
+    inp.cov_hytrue = cov(inp, mean_beta, h, inflated=False) 
+    inp.cov_hyinfl = cov(inp, mean_beta, h, inflated=True) 
     pickle.dump(inp.cov_hytrue, open(f'{inp.output_dir}/correlation_plots/cov_hytrue.p', 'wb'))
     pickle.dump(inp.cov_hyinfl, open(f'{inp.output_dir}/correlation_plots/cov_hyinfl.p', 'wb'))
 
@@ -74,29 +76,48 @@ def main():
     # Compute chi2 values
     print('Computing chi2 values...', flush=True)
     pool = mp.Pool(inp.num_parallel)
-    inputs = [(inp, beta, ra_halos, dec_halos, h) for beta in beta_arr]
-    results = list(tqdm.tqdm(pool.imap(compare_chi2_star, inputs), total=len(beta_arr)))
+    inputs = [(inp, beta, h) for beta in inp.beta_arr]
+    # results shape: (Nbetas, 2 for chi2_true chi2_infl, Nbins)
+    results = list(tqdm.tqdm(pool.imap(compare_chi2_star, inputs), total=len(inp.beta_arr)))
     pool.close()
     results = np.array(results, dtype=np.float32)
-    chi2_true_arr = results[:,0]
-    chi2_inflated_arr = results[:,1]
-    print('\ngot chi2 values', flush=True)
-    print('chi2_true_arr: ', chi2_true_arr, flush=True)
-    print('chi2_inflated_arr: ', chi2_inflated_arr, flush=True)
-
-
-    # save files and plot
-    pickle.dump(beta_arr, open(f'{inp.output_dir}/beta_arr.p', 'wb'))
+    chi2_true_arr = results[:,0].T # shape (Nbins, Nbetas)
+    chi2_inflated_arr = results[:,1].T # shape (Nbins, Nbetas)
+    print('\ngot chi2 values for each ell bin and beta value', flush=True)
+    pickle.dump(inp.beta_arr, open(f'{inp.output_dir}/beta_arr.p', 'wb'))
     pickle.dump(chi2_true_arr, open(f'{inp.output_dir}/chi2_true_arr.p', 'wb'))
     pickle.dump(chi2_inflated_arr, open(f'{inp.output_dir}/chi2_inflated_arr.p', 'wb'))
-    plt.plot(beta_arr, chi2_true_arr, label='reconstructed vs. true')
-    plt.plot(beta_arr, chi2_inflated_arr, label='reconstructed vs.\nreconstructed with CIB inflated', linestyle='dashed')
-    plt.xlabel(r'$\beta$')
-    plt.ylabel(r'${\chi}^2$')
-    plt.legend()
-    plt.yscale('log')
-    plt.grid(which='both')
-    plt.savefig(f'{inp.output_dir}/chi2.png')
+
+
+    # Fit best beta with 1sigma range for every ell bin, and save
+    means_true, uppers_true, lowers_true, means_infl, uppers_infl, lowers_infl = get_all_1sigma_beta(inp, chi2_true_arr, chi2_inflated_arr)
+    pickle.dump([means_true, uppers_true, lowers_true, means_infl, uppers_infl, lowers_infl], open(f'{inp.output_dir}/beta_points_per_ell.p', 'wb'))
+    best_fit_true, fit_err_true = predict_with_uncertainty(inp.mean_ells, means_true, lowers_true, uppers_true, deg=3)
+    best_fit_infl, fit_err_infl = predict_with_uncertainty(inp.mean_ells, means_infl, lowers_infl, uppers_infl, deg=3)
+    pickle.dump([best_fit_true, fit_err_true, best_fit_infl, fit_err_infl], open(f'{inp.output_dir}/best_fits.p', 'wb'))
+    
+
+    # Plot beta with error bars and best fit with error at each ell
+    plt.errorbar(inp.mean_ells, means_true, yerr=[lowers_true, uppers_true], fmt='o', label='Idealized (Points)', color='royalblue', zorder=1)
+    plt.errorbar(inp.mean_ells, means_infl, yerr=[lowers_infl, uppers_infl], fmt='^', label='Realistic (Points)', color='darkorange', zorder=1)
+    plt.plot(inp.mean_ells, best_fit_true, label="Idealized (Fit)", zorder=2)
+    plt.fill_between(inp.mean_ells, best_fit_true - fit_err_true, best_fit_true + fit_err_true, alpha=0.3, zorder=2)
+    plt.plot(inp.mean_ells, best_fit_infl, label="Realistic (Fit)", zorder=2)
+    plt.fill_between(inp.mean_ells, best_fit_infl - fit_err_infl, best_fit_infl + fit_err_infl, alpha=0.3, zorder=2)
+    plt.xlabel(r"$\ell$")
+    plt.ylabel(r"$\beta$")
+    plt.legend(fontsize=12)
+    plt.xlim(inp.ellmin, inp.ellmax)
+    plt.title(r'$\alpha=$'+f'{inp.alpha:.1f}', fontsize=18)
+    plt.grid()
+    plt.savefig(f'{inp.output_dir}/beta_per_ell.pdf', bbox_inches='tight')
+
+
+    # build final y-map, deprojecting optimal beta for each ell bin separately
+    contam_sed = np.array([cib_spectral_response(inp.frequencies, delta_bandpasses=delta_bandpasses, \
+                                    inp=inp, beta=beta) for beta in best_fit_infl]).T # shape (Nfreqs, Nbins)
+    fname = f"{inp.output_dir}/pyilc_outputs/final/needletILCmap_component_tSZ_deproject_CIB.fits"
+    HILC_map(inp, None, signal_sed, contam_sed=contam_sed, inflated=False, no_cib=False, fname=fname)
     
     return
 

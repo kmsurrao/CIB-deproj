@@ -1,16 +1,12 @@
 
-# Whether to use realistic data-based pipeline (amplifying residual to inflate CIB)
-# or to use simple pipeline with alpha * (agora CIB map)
-realistic: True
-
 # nside resolution parameter of maps
 nside: 1024 
 
 # maximum ell for which to compute chi^2 and perform ILC
 ellmax: 3000
 
-# minimum ell for which to include power in maps
-ellmin: 0
+# minimum ell for which to compute chi^2 and perform ILC (default is 2)
+ellmin: 2
 
 # If ILC_type is 'harmonic', this is the number of multipoles per bin 
 # to use in the harmonic ILC calculation 
@@ -26,31 +22,42 @@ frequencies: [100, 143, 217, 353, 545]
 # 'tSZ' and 'CIB'. Other options are 'CMB' and 'kSZ'.
 components: ['tSZ', 'CIB', 'CMB', 'kSZ']
 
-# ILC type (either 'harmonic' or 'needlet')
-ILC_type: 'harmonic'
-
-# If ILC_type is 'needlet', array of FWHM (arcmin) used for constrution 
-# of Gaussians. (needlet filters are differences of two Gaussians). 
-# FWHM need to be in strictly decreasing order.
-GN_FWHM_arcmin: [30, 15, 7, 3] #[12., 6., 3., 1.5]
-
 # whether there's decorrelation across frequencies for the CIB maps
-# If False, assumes a fixed CIB SED with beta=1.45 and builds all CIB maps
+# If False, assumes a fixed CIB SED with beta=1.65 and builds all CIB maps
 # using the 353 GHz CIB map scaled up or down according to the fixed SED
-cib_decorr: False
+cib_decorr: True
+
+# values of beta to test. If not provided, must provide beta_range and num_beta_vals
+beta_arr: 
+      [0.    , 0.05  , 0.1   , 0.15  , 0.2   , 0.25  , 0.3   , 0.35  ,
+       0.4   , 0.45  , 0.5   , 0.55  , 0.6   , 0.65  , 0.7   , 0.75  ,
+       0.8   , 0.85  , 0.9   , 0.95  , 1.    , 1.05  , 1.1   , 1.15  ,
+       1.2   , 1.25  , 1.3   , 1.35  , 1.4   , 1.45  , 1.5   , 1.5125,
+       1.525 , 1.5375, 1.55  , 1.5625, 1.575 , 1.5875, 1.6   , 1.6125,
+       1.625 , 1.6375, 1.65  , 1.65  , 1.6625, 1.675 , 1.6875, 1.7   ,
+       1.7   , 1.7125, 1.725 , 1.7375, 1.75  , 1.7625, 1.775 , 1.7875,
+       1.8   , 1.8   , 1.8125, 1.825 , 1.8375, 1.85  , 1.85  , 1.8625,
+       1.875 , 1.8875, 1.9   , 1.95  , 2.    , 2.05  , 2.1   , 2.15  ,
+       2.2   , 2.25  , 2.3   , 2.35  , 2.4   , 2.45  , 2.5   , 2.55  ,
+       2.6   , 2.65  , 2.7   , 2.75  , 2.8   , 2.85  , 2.9   , 2.95  ]
 
 # range of values (including start point but not end point) to test for beta
-beta_range: [1.6, 1.7]
+# this is ignored if beta_arr is provided
+beta_range: [1.65, 1.75]
 
 # number of beta values to test
+# this is ignored if beta_arr is provided
 num_beta_vals: 10
 
 # number of beta values to test in parallel
 # if this input is not provided, no parallelization is assumed (num_parallel=1)
 num_parallel: 10
 
-# factors by which to inflate residual and deproject for comparison
-alpha: 10.0
+# related to factor by which to inflate residual and deproject for comparison
+# if realistic == False, the CIB in the inflated map is just multiplied by alpha
+# if realistic == True, the residual is multiplied by h_nu, where h_nu=alpha
+# at all frequencies except for the highest frequency channel
+alpha: 1.0
 
 # type of noise to use (currently only supports 'Planck_no_beam', 'Planck_with_beam' or 'SO')
 noise_type: 'Planck_no_beam'
@@ -64,10 +71,6 @@ noise_fraction: 1.0
 # Only applied if noise_type is 'Planck_no_beam' or 'Planck_with_beam'. 
 # If noise_type is 'SO', beam_fraction is ignored if provided.
 beam_fraction: 1.0
-
-# whether to compute Gaussian covariance in harmonic space or 
-# use real space correlations with treecorr
-harmonic_space: True
 
 # directory containing agora CIB maps at each frequency in frequencies
 # on NERSC: /global/cfs/cdirs/act/data/agora_sims/cib/planck/len/uk
@@ -104,7 +107,7 @@ halo_catalog: '/scratch/09334/ksurrao/halo_files/haloslc_agora_zsel_0.8_to_1.8_M
 pyilc_path: '/work2/09334/ksurrao/stampede3/Github/pyilc'
 
 # directory in which to save outputs
-output_dir: '/scratch/09334/ksurrao/cib_deproj_fixed_bandpasses/planck_1p0noise_nocibdecorr_deprojsum'
+output_dir: '/scratch/09334/ksurrao/cib_deproj_030825/planck1p0_highz_decorr_alpha1'
 
 # If debug is True, there will be more intermediate printing
 debug: False

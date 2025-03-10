@@ -53,10 +53,7 @@ def setup_output_dir(inp, env, standard_ilc=False):
         subprocess.call(f'mkdir {inp.output_dir}/pyilc_yaml_files', shell=True, env=env)
     if not os.path.isdir(f'{inp.output_dir}/pyilc_outputs'):
         subprocess.call(f'mkdir {inp.output_dir}/pyilc_outputs', shell=True, env=env)
-    if inp.realistic:
-        inflation_strs = ['uninflated', 'inflated_realistic']
-    else:
-        inflation_strs = ['uninflated', 'inflated']
+    inflation_strs = ['uninflated', 'inflated']
     if not standard_ilc:
         beta_arr = np.linspace(inp.beta_range[0], inp.beta_range[1], num=inp.num_beta_vals, endpoint=False)
         write_beta_yamls(inp)
@@ -69,6 +66,10 @@ def setup_output_dir(inp, env, standard_ilc=False):
             subprocess.call(f'mkdir {inp.output_dir}/pyilc_outputs/{i}', shell=True, env=env)
         if not standard_ilc:
             break
+    
+    # directory for final y-map
+    if not os.path.isdir(f'{inp.output_dir}/pyilc_outputs/final'):
+        subprocess.call(f'mkdir {inp.output_dir}/pyilc_outputs/final', shell=True, env=env)
 
     return
 
@@ -303,10 +304,11 @@ def binned(inp, spectrum):
     '''
     ells = np.arange(inp.ellmax+1)
     Dl = ells*(ells+1)/2/np.pi*spectrum
-    Nbins = inp.ellmax//inp.ells_per_bin
-    res = stats.binned_statistic(ells[2:], Dl[2:], statistic='mean', bins=Nbins)
+    Nbins = (inp.ellmax-inp.ellmin+1)//inp.ells_per_bin
+    res = stats.binned_statistic(ells[inp.ellmin:], Dl[inp.ellmin:], statistic='mean', bins=Nbins)
     mean_ells = (res[1][:-1]+res[1][1:])/2
     inp.mean_ells = mean_ells
+    inp.bin_edges = res[1]
     binned_spectrum = res[0]/(mean_ells*(mean_ells+1)/2/np.pi)
     return binned_spectrum
 
@@ -327,7 +329,7 @@ def multifrequency_cov(inp, S, N):
     covar: 5D numpy array of shape (Nfreqs, Nfreqs, Nfreqs, Nfreqs, ellmax+1)
         containing Gaussian covariance matrix
     '''
-    ells = np.arange(inp.ellmax+1)
+    ells = np.arange(inp.ellmin, inp.ellmax+1)
     Nmodes = 1/(2*ells+1)
     covar = np.einsum('l,ikl,jml->ijkml', Nmodes, S, S) + np.einsum('l,iml,jkl->ijkml', Nmodes, S, S) \
           + np.einsum('l,ikl,jml->ijkml', Nmodes, S, N) + np.einsum('l,jml,ikl->ijkml', Nmodes, S, N) \

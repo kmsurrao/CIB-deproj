@@ -4,6 +4,7 @@ import pickle
 import healpy as hp
 from scipy import stats
 from utils import binned
+import os
 
 
 def plot_corr_harmonic(inp, beta, hy_true, hy_infl):
@@ -23,6 +24,8 @@ def plot_corr_harmonic(inp, beta, hy_true, hy_infl):
     -------
     None (saves plots in {output_dir}/plot_correlations)
     '''
+    if os.path.isfile(f'{inp.output_dir}/correlation_plots/beta_{beta:0.3f}.p'):
+        return
 
     # plot
     ells = np.arange(inp.ellmax+1)
@@ -45,42 +48,6 @@ def plot_corr_harmonic(inp, beta, hy_true, hy_infl):
     pickle.dump(to_save, open(f'{inp.output_dir}/correlation_plots/beta_{beta:0.3f}.p', 'wb'))
 
     return
-
-
-def plot_corr_real(inp, beta, hy_true, hy_infl, r_hy):
-    '''
-    Plots real space correlations
-
-    ARGUMENTS
-    ---------
-    inp: Info object containing input parameter specifications
-    beta: float, value of beta for CIB deprojection
-    hy_true: 1D numpy array of length nrad containing correlation of halos with 
-        (reconstructed y - true y)
-    hy_infl: 1D numpy array of length nrad containing correlation of halos with 
-        (reconstructed y - reconstructed y with inflated CIB)
-    r_hy: 1D numpy array of length nrad containing x-axis point for plotting
-
-    RETURNS
-    -------
-    None (saves plots in {output_dir}/plot_correlations)
-    '''
-
-    # plot
-    plt.clf()
-    plt.errorbar(r_hy, hy_true, yerr=np.sqrt(np.diag(inp.cov_hytrue)), ls='', marker='v', ms=3.0, label='h x (y recon. - y true)')
-    plt.errorbar(1.02*r_hy, hy_infl, yerr=np.sqrt(np.diag(inp.cov_hyinfl)), ls='', marker='o', ms=3.0, label='h x (y recon. - y recon. (CIB inflated))')
-    plt.legend()
-    plt.xscale('log')
-    plt.yscale('log')
-    plt.savefig(f'{inp.output_dir}/correlation_plots/beta_{beta:0.3f}.png')
-
-    # save spectra and errors to plot later
-    to_save = [hy_true, hy_infl, r_hy]
-    pickle.dump(to_save, open(f'{inp.output_dir}/correlation_plots/beta_{beta:0.3f}.p', 'wb'))
-
-    return
-
 
 
 def plot_corr_harmonic_from_map(inp, beta, y_true, y_recon, y_recon_inflated, h):

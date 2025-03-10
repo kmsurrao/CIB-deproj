@@ -31,8 +31,6 @@ def setup_pyilc(inp, env, beta, suppress_printing=False, inflated=False, standar
     
     pyilc_input_params = {}
     inflated_str = 'inflated' if inflated else 'uninflated'
-    if inp.realistic and inflated:
-        inflated_str += '_realistic'
     if not standard_ilc:
         pyilc_input_params['output_dir'] = str(inp.output_dir) + f"/pyilc_outputs/beta_{beta:.3f}_{inflated_str}/"
     else:
@@ -66,7 +64,7 @@ def setup_pyilc(inp, env, beta, suppress_printing=False, inflated=False, standar
     if no_cib:
         pyilc_input_params['freq_map_files'] = \
             [f'{inp.output_dir}/maps/no_cib_{freq}.fits' for freq in inp.frequencies]
-    elif inflated and inp.realistic:
+    elif inflated:
         pyilc_input_params['freq_map_files'] = \
             [f'{inp.output_dir}/maps/{inflated_str}_{freq}_{beta:.3f}.fits' for freq in inp.frequencies]
     else:
@@ -113,12 +111,11 @@ def setup_pyilc(inp, env, beta, suppress_printing=False, inflated=False, standar
     return ymap
 
 
-def get_all_ymaps(inp, env, beta):
+def get_all_ymaps(inp, beta):
     '''
     ARGUMENTS
     ---------
     inp: Info object containing input parameter specifications
-    env: environment object
     beta: float, value of beta for CIB deprojection
 
     RETURNS
@@ -128,28 +125,20 @@ def get_all_ymaps(inp, env, beta):
     '''
     y_recon_file = f"{inp.output_dir}/pyilc_outputs/beta_{beta:.3f}_uninflated/needletILCmap_component_tSZ_deproject_CIB.fits"
     if not os.path.isfile(y_recon_file):
-        if inp.ILC_type == 'needlet':
-            setup_pyilc(inp, env, beta, inflated=False, suppress_printing=(not inp.debug))
-        else:
-            delta_bandpasses = False if inp.cib_decorr else True
-            tsz_sed = tsz_spectral_response(inp.frequencies, delta_bandpasses=delta_bandpasses, inp=inp)
-            cib_sed = cib_spectral_response(inp.frequencies, delta_bandpasses=delta_bandpasses, inp=inp, beta=beta)
-            HILC_map(inp, beta, tsz_sed, contam_sed=cib_sed, inflated=False)
-    infl_str = 'inflated_realistic' if inp.realistic else 'inflated'
-    y_recon_infl_file = f"{inp.output_dir}/pyilc_outputs/beta_{beta:.3f}_{infl_str}/needletILCmap_component_tSZ_deproject_CIB.fits"
+        delta_bandpasses = False if inp.cib_decorr else True
+        tsz_sed = tsz_spectral_response(inp.frequencies, delta_bandpasses=delta_bandpasses, inp=inp)
+        cib_sed = cib_spectral_response(inp.frequencies, delta_bandpasses=delta_bandpasses, inp=inp, beta=beta)
+        HILC_map(inp, beta, tsz_sed, contam_sed=cib_sed, inflated=False)
+    y_recon_infl_file = f"{inp.output_dir}/pyilc_outputs/beta_{beta:.3f}_inflated/needletILCmap_component_tSZ_deproject_CIB.fits"
     if not os.path.isfile(y_recon_infl_file):
-        if inp.realistic:
-            get_realistic_infl_maps(inp, beta)
-        if inp.ILC_type == 'needlet':
-            setup_pyilc(inp, env, beta, inflated=True, suppress_printing=(not inp.debug))
-        else:
-            delta_bandpasses = False if inp.cib_decorr else True
-            tsz_sed = tsz_spectral_response(inp.frequencies, delta_bandpasses=delta_bandpasses, inp=inp)
-            cib_sed = cib_spectral_response(inp.frequencies, delta_bandpasses=delta_bandpasses, inp=inp, beta=beta)
-            h_vec = inp.alpha*np.ones_like(inp.frequencies, dtype=np.float32)
-            h_vec[-1] = -inp.alpha*sum(tsz_sed[:len(tsz_sed)]**2)/(tsz_sed[-1]**2)
-            contam_sed = cib_sed*(1+h_vec)
-            HILC_map(inp, beta, tsz_sed, contam_sed = contam_sed, inflated=True)
+        get_realistic_infl_maps(inp, beta)
+        delta_bandpasses = False if inp.cib_decorr else True
+        tsz_sed = tsz_spectral_response(inp.frequencies, delta_bandpasses=delta_bandpasses, inp=inp)
+        cib_sed = cib_spectral_response(inp.frequencies, delta_bandpasses=delta_bandpasses, inp=inp, beta=beta)
+        h_vec = inp.alpha*np.ones_like(inp.frequencies, dtype=np.float32)
+        h_vec[-1] = -inp.alpha*sum(tsz_sed[:len(tsz_sed)]**2)/(tsz_sed[-1]**2)
+        contam_sed = cib_sed*(1+h_vec)
+        HILC_map(inp, beta, tsz_sed, contam_sed = contam_sed, inflated=True)
     return 1
 
 
@@ -164,7 +153,7 @@ def get_all_ymaps_star(args):
 
     RETURNS
     -------
-    function of *args, get_all_ymaps(inp, env, beta)
+    function of *args, get_all_ymaps(inp, beta)
     '''
     return get_all_ymaps(*args)
 

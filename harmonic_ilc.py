@@ -63,16 +63,19 @@ def get_Rlij_inv(inp, freq_alm):
     return Rlij_inv #index as Rlij_inv[l,i,j]
     
 
-def weights(Rlij_inv, signal_sed, contam_sed=None):
+def weights(inp, Rlij_inv, signal_sed, contam_sed=None):
     '''
     ARGUMENTS
     ---------
+    inp: Info object containing input parameter specifications
     Rlij_inv: (ellmax+1, Nfreqs, Nfreqs) 
         ndarray containing inverse Rij matrix at each ell
     signal_sed: array-like of length Nfreqs containing spectral response
         of component of interest at each frequency
     contam_sed: array-like of length Nfreqs containing spectral response
-        of component to deproject at each frequency (if None, standard ILC is performed)
+        of component to deproject at each frequency (if None, standard ILC is performed).
+        If provided as a 2D array of size (Nfreqs, Nbins), separate SEDs are deprojected
+        in each ell bin.
     
     RETURNS
     -------
@@ -83,28 +86,41 @@ def weights(Rlij_inv, signal_sed, contam_sed=None):
         denominator = np.einsum('lkm,k,m->l', Rlij_inv, signal_sed, signal_sed)
         w = numerator/denominator 
     else: #constrained ILC
-        A = np.einsum('lij,i,j->l', Rlij_inv, signal_sed, signal_sed)
-        B = np.einsum('lij,i,j->l', Rlij_inv, contam_sed, contam_sed)
-        D = np.einsum('lij,i,j->l', Rlij_inv, signal_sed, contam_sed)
-        numerator = np.einsum('lij,l,i->jl', Rlij_inv, B, signal_sed) \
-                    - np.einsum('lij,l,i->jl', Rlij_inv, D, contam_sed)
-        denominator = np.einsum('l,l->l', A, B) - np.einsum('l,l->l', D, D)
+        if len(contam_sed.shape) == 2 and contam_sed.shape[1] > 1:
+            counts = np.diff(inp.bin_edges).astype(int)
+            contam_sed = np.repeat(contam_sed, counts, axis=1)
+            A = np.einsum('lij,i,j->l', Rlij_inv, signal_sed, signal_sed)
+            B = np.einsum('lij,il,jl->l', Rlij_inv, contam_sed, contam_sed)
+            D = np.einsum('lij,i,jl->l', Rlij_inv, signal_sed, contam_sed)
+            numerator = np.einsum('lij,l,i->jl', Rlij_inv, B, signal_sed) \
+                        - np.einsum('lij,l,il->jl', Rlij_inv, D, contam_sed)
+            denominator = np.einsum('l,l->l', A, B) - np.einsum('l,l->l', D, D)
+        else:
+            A = np.einsum('lij,i,j->l', Rlij_inv, signal_sed, signal_sed)
+            B = np.einsum('lij,i,j->l', Rlij_inv, contam_sed, contam_sed)
+            D = np.einsum('lij,i,j->l', Rlij_inv, signal_sed, contam_sed)
+            numerator = np.einsum('lij,l,i->jl', Rlij_inv, B, signal_sed) \
+                        - np.einsum('lij,l,i->jl', Rlij_inv, D, contam_sed)
+            denominator = np.einsum('l,l->l', A, B) - np.einsum('l,l->l', D, D)
         w = numerator/denominator
     return w #index as w[i][l]
 
 
-def HILC_map(inp, beta, signal_sed, contam_sed=None, inflated=False, no_cib=False):
+def HILC_map(inp, beta, signal_sed, contam_sed=None, inflated=False, no_cib=False, fname=None):
     '''
     ARGUMENTS
     ---------
     inp: Info object containing input parameter specifications
-    beta: float, beta value to use for CIB deprojection
+    beta: float, beta value to use for CIB deprojection (set to None if fname provided)
     signal_sed: array-like of length Nfreqs containing spectral response
         of component of interest at each frequency
     contam_sed: array-like of length Nfreqs containing spectral response
-        of component to deproject at each frequency (if None, standard ILC is performed)
+        of component to deproject at each frequency (if None, standard ILC is performed).
+        If provided as a 2D array of size (Nfreqs, Nbins), separate SEDs are deprojected
+        in each ell bin.
     inflated: Bool, whether or not to use inflated CIB frequency maps
     no_cib: Bool, if True, use maps without CIB included
+    fname: str, filename. Default is None if beta is provided.
 
     RETURNS
     -------
@@ -112,29 +128,28 @@ def HILC_map(inp, beta, signal_sed, contam_sed=None, inflated=False, no_cib=Fals
 
     '''
     inflated_str = 'inflated' if inflated else 'uninflated'
-    if inp.realistic and inflated:
-        inflated_str += '_realistic'
     if no_cib:
         freq_alm = get_alm(inp, [f'{inp.output_dir}/maps/no_cib_{freq}.fits' for freq in inp.frequencies])
-    elif inflated and inp.realistic:
+    elif inflated:
         freq_alm = get_alm(inp, [f'{inp.output_dir}/maps/{inflated_str}_{freq}_{beta:.3f}.fits' for freq in inp.frequencies])
     else:
         freq_alm = get_alm(inp, [f'{inp.output_dir}/maps/{inflated_str}_{freq}.fits' for freq in inp.frequencies])
    
     Rlij_inv = get_Rlij_inv(inp, freq_alm)
-    w = weights(Rlij_inv, signal_sed, contam_sed)
+    w = weights(inp, Rlij_inv, signal_sed, contam_sed)
 
     hilc_map = np.zeros(12*inp.nside**2, dtype=np.float32)
     for i, alm_orig in enumerate(freq_alm):
         alm = hp.almxfl(alm_orig, w[i])
         hilc_map += hp.alm2map(alm, inp.nside)  
-    
-    if contam_sed is None:
+
+    if fname is not None:
+        pass
+    elif contam_sed is None:
         fname = f'{inp.output_dir}/pyilc_outputs/uninflated/needletILCmap_component_tSZ.fits'
     elif not inflated:
         fname = f"{inp.output_dir}/pyilc_outputs/beta_{beta:.3f}_uninflated/needletILCmap_component_tSZ_deproject_CIB.fits"
     else:
-        infl_str = 'inflated_realistic' if inp.realistic else 'inflated'
-        fname = f"{inp.output_dir}/pyilc_outputs/beta_{beta:.3f}_{infl_str}/needletILCmap_component_tSZ_deproject_CIB.fits"
+        fname = f"{inp.output_dir}/pyilc_outputs/beta_{beta:.3f}_inflated/needletILCmap_component_tSZ_deproject_CIB.fits"
     hp.write_map(fname, hilc_map, dtype=np.float32)
     return hilc_map

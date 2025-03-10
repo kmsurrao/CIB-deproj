@@ -1,7 +1,6 @@
 import healpy as hp
 from tqdm import tqdm
 import numpy as np
-import pickle
 import h5py
 import os
 import argparse
@@ -20,8 +19,6 @@ def halodir2map(inp, save_single_catalog=True):
     RETURNS
     -------
     density: 1D numpy array in RING ordering containing halo density map
-    ra_halos: ndarray containing ra of halos
-    dec_halos: ndarray containing dec of halos
     '''
 
     halo_ldir = inp.halo_files_dir
@@ -83,7 +80,7 @@ def halodir2map(inp, save_single_catalog=True):
         hf.create_dataset('M', data=m_halos)
         hf.close()
 
-    return density, ra_halos, dec_halos
+    return density
 
 
 def halofile2map(inp):
@@ -93,8 +90,6 @@ def halofile2map(inp):
     ARGUMENTS
     ---------
     inp: Info object containing input parameter specifications
-    ra_halos: ndarray containing ra of halos
-    dec_halos: ndarray containing dec of halos
 
     RETURNS
     -------
@@ -108,13 +103,7 @@ def halofile2map(inp):
     halo_ra_all = np.array(ra)
     halo_dec_all= np.array(dec)
     halo_z_all= np.array(z_all)
-    halo_m_all= np.array(mvir) 
-
-    # # comment out section above and use section below if h5py not working
-    # halo_ra_all = pickle.load(open(f'{inp.output_dir}/halo_ra_all.p', 'rb'))  
-    # halo_dec_all = pickle.load(open(f'{inp.output_dir}/halo_dec_all.p', 'rb'))    
-    # halo_z_all = pickle.load(open(f'{inp.output_dir}/halo_z_all.p', 'rb')) 
-    # halo_m_all = pickle.load(open(f'{inp.output_dir}/halo_m_all.p', 'rb'))      
+    halo_m_all= np.array(mvir)     
 
     #you can change the selection to have more or less halos to boost the SNR of correlations.
     ra_halos = halo_ra_all
@@ -133,7 +122,7 @@ def halofile2map(inp):
     density = hp.reorder(density, n2r=True)
     hp.write_map(f'{inp.output_dir}/maps/halo.fits', density, overwrite=True, dtype=np.float32)
 
-    return density, ra_halos, dec_halos
+    return density
 
 if __name__ == '__main__':
 

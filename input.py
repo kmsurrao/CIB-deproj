@@ -1,5 +1,6 @@
 import yaml
 import os
+import numpy as np
 
 ##########################
 # simple function for opening the file
@@ -19,8 +20,6 @@ class Info(object):
         self.input_file = input_file
         p = read_dict_from_yaml(self.input_file)
 
-        self.realistic = p['realistic']
-
         self.nside = p['nside']
         assert type(self.nside) is int and (self.nside & (self.nside-1) == 0) and self.nside != 0, "nside must be integer power of 2"
         self.ellmax = p['ellmax']
@@ -35,7 +34,8 @@ class Info(object):
         if 'ellmin' in p:
             self.ellmin = p['ellmin']
         else:
-            self.ellmin = 0
+            self.ellmin = 2
+        assert self.ellmin < self.ellmax, "ellmin must be less than ellmax"
 
         self.frequencies = p['frequencies']
         assert len(self.frequencies) >= 2, "ILC requires at least two frequency channels"
@@ -47,14 +47,15 @@ class Info(object):
         self.components = p['components']
         assert 'tSZ' in self.components and 'CIB' in self.components, "'tSZ' and 'CIB' must be in components list"
         assert set(self.components).issubset({'tSZ', 'CIB', 'CMB', 'kSZ'}), "Allowed components are 'tSZ', 'CIB', 'CMB', 'kSZ'"
-        self.ILC_type = p['ILC_type']
-        assert self.ILC_type in {'harmonic', 'needlet'}, "ILC_type must be either 'needlet' or 'harmonic'"
-        if self.ILC_type == 'needlet':
-            self.GN_FWHM_arcmin = p['GN_FWHM_arcmin']
         
-        self.beta_range = p['beta_range']
-        assert len(self.beta_range) == 2, "beta_range must consist of two values corresponding to ends of interval"
-        self.num_beta_vals = p['num_beta_vals']
+        if 'beta_arr' in p:
+            self.beta_arr = p['beta_arr']
+            assert isinstance(self.beta_arr, list), "beta_arr must be a list"
+        else:
+            beta_range = p['beta_range']
+            assert len(beta_range) == 2, "beta_range must consist of two values corresponding to ends of interval"
+            num_beta_vals = p['num_beta_vals']
+            self.beta_arr = np.linspace(beta_range[0], beta_range[1], num=num_beta_vals, endpoint=False)
         assert type(self.num_beta_vals) is int, "num_beta_vals must be an integer"
         assert self.num_beta_vals >= 1, "num_beta_vals must be at least 1"
         if 'num_parallel' in p:
@@ -77,7 +78,6 @@ class Info(object):
                 assert 0 < self.beam_fraction, "beam_fraction must be greater than 0"
             else:
                 self.beam_fraction = 1.
-        self.harmonic_space = p['harmonic_space']
         
         self.cib_map_dir = p['cib_map_dir']
         assert type(self.cib_map_dir) is str, "TypeError: cib_map_dir must be str"
