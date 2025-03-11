@@ -21,7 +21,8 @@ def compute_1sigma_beta(inp, chi2_arr, a):
     '''
     x_vals = inp.beta_arr
     y_vals = chi2_arr
-    spline = interp.interp1d(x_vals, y_vals, kind='cubic')
+    kind = 'cubic' if len(x_vals) >= 4 else 'linear'
+    spline = interp.interp1d(x_vals, y_vals, kind=kind)
     x_min = x_vals[np.argmin(y_vals)]
     y_min = np.amin(y_vals)
     target_value = y_min + 1

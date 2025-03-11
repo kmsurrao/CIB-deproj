@@ -14,7 +14,6 @@ from harmonic_ilc import HILC_map
 from beta_per_bin import get_all_1sigma_beta, predict_with_uncertainty
 from utils import *
 plt.rcParams.update({
-     'text.usetex': True,
      'font.family': 'serif',
      'font.sans-serif': ['Computer Modern'],
      'font.size'   : 20})
@@ -22,6 +21,12 @@ plt.rc_context({'axes.autolimit_mode': 'round_numbers'})
 
 
 def main():
+    '''
+    RETURNS
+    -------
+    final_map: healpix final y-map in RING format, 
+            deprojecting optimal beta for each ell bin separately
+    '''
 
     # main input file containing most specifications 
     parser = argparse.ArgumentParser(description="Optimal beta value for CIB deprojection.")
@@ -41,9 +46,13 @@ def main():
         h = halofile2map(inp)
     else:
         h = halodir2map(inp)
-    print('got halo map', flush=True)
+    print('Got halo map', flush=True)
     print('Getting maps at different frequencies...', flush=True)
     get_freq_maps(inp, no_cib=False)
+
+    # define some variables
+    delta_bandpasses = False if inp.cib_decorr else True
+    signal_sed = tsz_spectral_response(inp.frequencies, delta_bandpasses=delta_bandpasses, inp=inp)
 
 
     # Build standard ILC y-map (from maps with no CIB)
@@ -51,8 +60,6 @@ def main():
     standard_ILC_file = f'{inp.output_dir}/pyilc_outputs/uninflated/needletILCmap_component_tSZ.fits'
     if not os.path.isfile(standard_ILC_file):
         get_freq_maps(inp, no_cib=True)
-        delta_bandpasses = False if inp.cib_decorr else True
-        signal_sed = tsz_spectral_response(inp.frequencies, delta_bandpasses=delta_bandpasses, inp=inp)
         HILC_map(inp, 1.0, signal_sed, contam_sed=None, inflated=False, no_cib=True)
 
 
@@ -67,10 +74,16 @@ def main():
     # Compute covariance matrix
     mean_beta = inp.beta_arr[len(inp.beta_arr)//2]
     print(f'\nComputing covariance matrix using beta={mean_beta:0.3f}...', flush=True)
-    inp.cov_hytrue = cov(inp, mean_beta, h, inflated=False) 
-    inp.cov_hyinfl = cov(inp, mean_beta, h, inflated=True) 
-    pickle.dump(inp.cov_hytrue, open(f'{inp.output_dir}/correlation_plots/cov_hytrue.p', 'wb'))
-    pickle.dump(inp.cov_hyinfl, open(f'{inp.output_dir}/correlation_plots/cov_hyinfl.p', 'wb'))
+    if os.path.isfile(f'{inp.output_dir}/correlation_plots/cov_hytrue.p'):
+        inp.cov_hytrue = pickle.load(open(f'{inp.output_dir}/correlation_plots/cov_hytrue.p', 'rb'))
+    else:   
+        inp.cov_hytrue = cov(inp, mean_beta, h, inflated=False) 
+        pickle.dump(inp.cov_hytrue, open(f'{inp.output_dir}/correlation_plots/cov_hytrue.p', 'wb'))
+    if os.path.isfile(f'{inp.output_dir}/correlation_plots/cov_hyinfl.p'):
+        inp.cov_hyinfl = pickle.load(open(f'{inp.output_dir}/correlation_plots/cov_hyinfl.p', 'rb'))
+    else:
+        inp.cov_hyinfl = cov(inp, mean_beta, h, inflated=True) 
+        pickle.dump(inp.cov_hyinfl, open(f'{inp.output_dir}/correlation_plots/cov_hyinfl.p', 'wb'))
 
 
     # Compute chi2 values
@@ -83,10 +96,17 @@ def main():
     results = np.array(results, dtype=np.float32)
     chi2_true_arr = results[:,0].T # shape (Nbins, Nbetas)
     chi2_inflated_arr = results[:,1].T # shape (Nbins, Nbetas)
-    print('\ngot chi2 values for each ell bin and beta value', flush=True)
+    print('\nGot chi2 values for each ell bin and beta value', flush=True)
     pickle.dump(inp.beta_arr, open(f'{inp.output_dir}/beta_arr.p', 'wb'))
     pickle.dump(chi2_true_arr, open(f'{inp.output_dir}/chi2_true_arr.p', 'wb'))
     pickle.dump(chi2_inflated_arr, open(f'{inp.output_dir}/chi2_inflated_arr.p', 'wb'))
+
+    # Get mean ells in each bin
+    ells = np.arange(inp.ellmax+1)
+    Nbins = int(np.round((inp.ellmax-inp.ellmin+1)/inp.ells_per_bin))
+    res = stats.binned_statistic(ells[inp.ellmin:], ells[inp.ellmin:], statistic='mean', bins=Nbins)
+    inp.mean_ells = (res[1][:-1]+res[1][1:])/2
+    inp.bin_edges = res[1]
 
 
     # Fit best beta with 1sigma range for every ell bin, and save
@@ -114,12 +134,13 @@ def main():
 
 
     # build final y-map, deprojecting optimal beta for each ell bin separately
+    print('Building final y-map, deprojecting optimal beta in each bin...')
     contam_sed = np.array([cib_spectral_response(inp.frequencies, delta_bandpasses=delta_bandpasses, \
                                     inp=inp, beta=beta) for beta in best_fit_infl]).T # shape (Nfreqs, Nbins)
     fname = f"{inp.output_dir}/pyilc_outputs/final/needletILCmap_component_tSZ_deproject_CIB.fits"
-    HILC_map(inp, None, signal_sed, contam_sed=contam_sed, inflated=False, no_cib=False, fname=fname)
+    final_map = HILC_map(inp, None, signal_sed, contam_sed=contam_sed, inflated=False, no_cib=False, fname=fname)
     
-    return
+    return final_map
 
 if __name__ == '__main__':
     main()

@@ -18,8 +18,7 @@ def write_beta_yamls(inp):
     -------
     None
     '''
-    beta_arr = np.linspace(inp.beta_range[0], inp.beta_range[1], num=inp.num_beta_vals, endpoint=False, dtype=np.float32)
-    for beta in beta_arr:
+    for beta in inp.beta_arr:
         pars = {'beta_CIB': float(beta), 'Tdust_CIB': 24.0, 'nu0_CIB_ghz':353.0, 'kT_e_keV':5.0, 'nu0_radio_ghz':150.0, 'beta_radio': -0.5}
         beta_yaml = f'{inp.output_dir}/pyilc_yaml_files/beta_{beta:.3f}.yaml'
         with open(beta_yaml, 'w') as outfile:
@@ -55,9 +54,8 @@ def setup_output_dir(inp, env, standard_ilc=False):
         subprocess.call(f'mkdir {inp.output_dir}/pyilc_outputs', shell=True, env=env)
     inflation_strs = ['uninflated', 'inflated']
     if not standard_ilc:
-        beta_arr = np.linspace(inp.beta_range[0], inp.beta_range[1], num=inp.num_beta_vals, endpoint=False)
         write_beta_yamls(inp)
-        for beta in beta_arr:
+        for beta in inp.beta_arr:
             for i in inflation_strs:
                 if not os.path.isdir(f'{inp.output_dir}/pyilc_outputs/beta_{beta:.3f}_{i}'):
                     subprocess.call(f'mkdir {inp.output_dir}/pyilc_outputs/beta_{beta:.3f}_{i}', shell=True, env=env)
@@ -304,7 +302,7 @@ def binned(inp, spectrum):
     '''
     ells = np.arange(inp.ellmax+1)
     Dl = ells*(ells+1)/2/np.pi*spectrum
-    Nbins = (inp.ellmax-inp.ellmin+1)//inp.ells_per_bin
+    Nbins = int(np.round((inp.ellmax-inp.ellmin+1)/inp.ells_per_bin))
     res = stats.binned_statistic(ells[inp.ellmin:], Dl[inp.ellmin:], statistic='mean', bins=Nbins)
     mean_ells = (res[1][:-1]+res[1][1:])/2
     inp.mean_ells = mean_ells

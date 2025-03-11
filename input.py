@@ -56,8 +56,8 @@ class Info(object):
             assert len(beta_range) == 2, "beta_range must consist of two values corresponding to ends of interval"
             num_beta_vals = p['num_beta_vals']
             self.beta_arr = np.linspace(beta_range[0], beta_range[1], num=num_beta_vals, endpoint=False)
-        assert type(self.num_beta_vals) is int, "num_beta_vals must be an integer"
-        assert self.num_beta_vals >= 1, "num_beta_vals must be at least 1"
+            assert type(num_beta_vals) is int, "num_beta_vals must be an integer"
+            assert num_beta_vals >= 1, "num_beta_vals must be at least 1"
         if 'num_parallel' in p:
             self.num_parallel = p['num_parallel']
             assert type(self.num_parallel) is int, "num_parallel must be an integer"

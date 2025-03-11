@@ -26,16 +26,10 @@ def plot_corr_harmonic(inp, beta, hy_true, hy_infl):
     '''
     if os.path.isfile(f'{inp.output_dir}/correlation_plots/beta_{beta:0.3f}.p'):
         return
-
-    # plot
-    ells = np.arange(inp.ellmax+1)
-    Nbins = inp.ellmax//inp.ells_per_bin
-    res = stats.binned_statistic(ells[2:], ells[2:], statistic='mean', bins=Nbins)
-    mean_ells = (res[1][:-1]+res[1][1:])/2
-    to_dl = mean_ells*(mean_ells+1)/2/np.pi
+    to_dl = inp.mean_ells*(inp.mean_ells+1)/2/np.pi
     plt.clf()
-    plt.errorbar(mean_ells, to_dl*hy_true, label=r'$C_\ell^{h, (\mathrm{yrecon.-ytrue})}$', yerr=to_dl*np.sqrt(np.diagonal(inp.cov_hytrue)), linestyle='solid')
-    plt.errorbar(mean_ells, to_dl*hy_infl, label=r'$C_\ell^{h, (\mathrm{yrecon.-yreconinflcib})}$', yerr=to_dl*np.sqrt(np.diagonal(inp.cov_hyinfl)), linestyle='dashed')
+    plt.errorbar(inp.mean_ells, to_dl*hy_true, label=r'$C_\ell^{h, (\mathrm{yrecon.-ytrue})}$', yerr=to_dl*np.sqrt(np.diagonal(inp.cov_hytrue)), linestyle='solid')
+    plt.errorbar(inp.mean_ells, to_dl*hy_infl, label=r'$C_\ell^{h, (\mathrm{yrecon.-yreconinflcib})}$', yerr=to_dl*np.sqrt(np.diagonal(inp.cov_hyinfl)), linestyle='dashed')
     plt.grid()
     plt.ylabel(r'$\ell(\ell+1)C_\ell /(2\pi)$ [$\mu \mathrm{K}^2$]')
     plt.xlabel(r'$\ell$')
@@ -44,7 +38,7 @@ def plot_corr_harmonic(inp, beta, hy_true, hy_infl):
     plt.savefig(f'{inp.output_dir}/correlation_plots/beta_{beta:0.3f}.png')
 
     # save mean_ells, spectra, and errors to plot later
-    to_save = [mean_ells, to_dl, hy_true, hy_infl]
+    to_save = [inp.mean_ells, to_dl, hy_true, hy_infl]
     pickle.dump(to_save, open(f'{inp.output_dir}/correlation_plots/beta_{beta:0.3f}.p', 'wb'))
 
     return
