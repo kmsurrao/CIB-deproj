@@ -183,8 +183,9 @@ def predict_with_uncertainty(x_data, y_data, yerr_lo, yerr_hi, deg=3):
 
     RETURNS
     -------
-    y_fit: (Nbins, ) predicted beta in each bin based on fit
-    y_fit_err: (Nbins, ) error (symmetric) in predicted beta in each bin 
+    y_fit: (Nbins, ) array with predicted beta in each bin based on fit
+    y_fit_err: (Nbins, ) array with error (symmetric) in predicted beta in each bin
+    popt: (deg+1, ) array with optimal parameter values for the model
     '''
     popt, pcov = find_fit(x_data, y_data, yerr_lo, yerr_hi, deg)
 
@@ -208,6 +209,6 @@ def predict_with_uncertainty(x_data, y_data, yerr_lo, yerr_hi, deg=3):
     var_y = np.clip(var_y, 0, None)
 
     y_fit_err = np.sqrt(var_y)
-    return y_fit, y_fit_err
+    return y_fit, y_fit_err, popt
 
 

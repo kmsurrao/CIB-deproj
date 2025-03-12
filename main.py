@@ -11,7 +11,7 @@ from cross_corr import cov, compare_chi2_star
 from get_y_map import get_all_ymaps_star
 from generate_maps import get_freq_maps
 from harmonic_ilc import HILC_map
-from beta_per_bin import get_all_1sigma_beta, predict_with_uncertainty
+from beta_per_bin import get_all_1sigma_beta, predict_with_uncertainty, model
 from utils import *
 plt.rcParams.update({
      'font.family': 'serif',
@@ -112,9 +112,9 @@ def main():
     # Fit best beta with 1sigma range for every ell bin, and save
     means_true, uppers_true, lowers_true, means_infl, uppers_infl, lowers_infl = get_all_1sigma_beta(inp, chi2_true_arr, chi2_inflated_arr)
     pickle.dump([means_true, uppers_true, lowers_true, means_infl, uppers_infl, lowers_infl], open(f'{inp.output_dir}/beta_points_per_ell.p', 'wb'))
-    best_fit_true, fit_err_true = predict_with_uncertainty(inp.mean_ells, means_true, lowers_true, uppers_true, deg=3)
-    best_fit_infl, fit_err_infl = predict_with_uncertainty(inp.mean_ells, means_infl, lowers_infl, uppers_infl, deg=3)
-    pickle.dump([best_fit_true, fit_err_true, best_fit_infl, fit_err_infl], open(f'{inp.output_dir}/best_fits.p', 'wb'))
+    best_fit_true, fit_err_true, popt_true = predict_with_uncertainty(inp.mean_ells, means_true, lowers_true, uppers_true, deg=3)
+    best_fit_infl, fit_err_infl, popt_infl = predict_with_uncertainty(inp.mean_ells, means_infl, lowers_infl, uppers_infl, deg=3)
+    pickle.dump([best_fit_true, fit_err_true, popt_true, best_fit_infl, fit_err_infl, popt_infl], open(f'{inp.output_dir}/best_fits.p', 'wb'))
     
 
     # Plot beta with error bars and best fit with error at each ell
@@ -133,12 +133,16 @@ def main():
     plt.savefig(f'{inp.output_dir}/beta_per_ell.pdf', bbox_inches='tight')
 
 
-    # build final y-map, deprojecting optimal beta for each ell bin separately
+    # build final y-maps, deprojecting optimal beta for each ell bin separately
     print('Building final y-map, deprojecting optimal beta in each bin...')
-    contam_sed = np.array([cib_spectral_response(inp.frequencies, delta_bandpasses=delta_bandpasses, \
-                                    inp=inp, beta=beta) for beta in best_fit_infl]).T # shape (Nfreqs, Nbins)
-    fname = f"{inp.output_dir}/pyilc_outputs/final/needletILCmap_component_tSZ_deproject_CIB.fits"
-    final_map = HILC_map(inp, None, signal_sed, contam_sed=contam_sed, inflated=False, no_cib=False, fname=fname)
+    for i in range(2):
+        popt = popt_infl if i==0 else popt_true
+        pipeline_str = 'realistic' if i==0 else 'idealized'
+        beta_vs_ell = model(ells, *popt)
+        contam_sed = np.array([cib_spectral_response(inp.frequencies, delta_bandpasses=delta_bandpasses, \
+                                        inp=inp, beta=beta) for beta in beta_vs_ell]).T # shape (Nfreqs, ellmax+1)
+        fname = f"{inp.output_dir}/pyilc_outputs/final/needletILCmap_component_tSZ_deproject_CIB_{pipeline_str}.fits"
+        final_map = HILC_map(inp, None, signal_sed, contam_sed=contam_sed, inflated=False, no_cib=False, fname=fname)
     
     return final_map
 

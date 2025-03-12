@@ -74,8 +74,8 @@ def weights(inp, Rlij_inv, signal_sed, contam_sed=None):
         of component of interest at each frequency
     contam_sed: array-like of length Nfreqs containing spectral response
         of component to deproject at each frequency (if None, standard ILC is performed).
-        If provided as a 2D array of size (Nfreqs, Nbins), separate SEDs are deprojected
-        in each ell bin.
+        If provided as a 2D array of size (Nfreqs, ellmax+1), separate SEDs are deprojected
+        at each ell.
     
     RETURNS
     -------
@@ -87,11 +87,6 @@ def weights(inp, Rlij_inv, signal_sed, contam_sed=None):
         w = numerator/denominator 
     else: #constrained ILC
         if len(contam_sed.shape) == 2 and contam_sed.shape[1] > 1:
-            ells = np.arange(inp.ellmax+1)
-            bin_idx = np.digitize(ells, inp.bin_edges) - 1
-            bin_idx[ells < inp.ellmin] = 0
-            bin_idx[bin_idx > len(inp.bin_edges)-2] =  len(inp.bin_edges)-2
-            contam_sed = contam_sed[:, bin_idx]
             A = np.einsum('lij,i,j->l', Rlij_inv, signal_sed, signal_sed)
             B = np.einsum('lij,il,jl->l', Rlij_inv, contam_sed, contam_sed)
             D = np.einsum('lij,i,jl->l', Rlij_inv, signal_sed, contam_sed)
