@@ -21,12 +21,6 @@ plt.rc_context({'axes.autolimit_mode': 'round_numbers'})
 
 
 def main():
-    '''
-    RETURNS
-    -------
-    final_map: healpix final y-map in RING format, 
-            deprojecting optimal beta for each ell bin separately
-    '''
 
     # main input file containing most specifications 
     parser = argparse.ArgumentParser(description="Optimal beta value for CIB deprojection.")
@@ -139,12 +133,13 @@ def main():
         popt = popt_infl if i==0 else popt_true
         pipeline_str = 'realistic' if i==0 else 'idealized'
         beta_vs_ell = model(ells, *popt)
-        contam_sed = np.array([cib_spectral_response(inp.frequencies, delta_bandpasses=delta_bandpasses, \
-                                        inp=inp, beta=beta) for beta in beta_vs_ell]).T # shape (Nfreqs, ellmax+1)
+        contam_sed = cib_spectral_response(inp.frequencies, delta_bandpasses=delta_bandpasses, \
+                                           inp=inp, beta=beta_vs_ell) # shape (Nfreqs, ellmax+1)
         fname = f"{inp.output_dir}/pyilc_outputs/final/needletILCmap_component_tSZ_deproject_CIB_{pipeline_str}.fits"
-        final_map = HILC_map(inp, None, signal_sed, contam_sed=contam_sed, inflated=False, no_cib=False, fname=fname)
-    
-    return final_map
+        HILC_map(inp, None, signal_sed, contam_sed=contam_sed, inflated=False, no_cib=False, fname=fname)
+    print('Saved final y-maps, built with both the realistic and idealized pipelines.')
+
+    return 
 
 if __name__ == '__main__':
     main()
