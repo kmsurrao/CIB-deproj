@@ -58,6 +58,8 @@ class Info(object):
             self.beta_arr = np.linspace(beta_range[0], beta_range[1], num=num_beta_vals, endpoint=False)
             assert type(num_beta_vals) is int, "num_beta_vals must be an integer"
             assert num_beta_vals >= 1, "num_beta_vals must be at least 1"
+        self.beta_fid = p['beta_fid']
+        assert isinstance(self.beta_fid, float) or isinstance(self.beta_fid, int), "beta_fid must be a float or int"
         if 'num_parallel' in p:
             self.num_parallel = p['num_parallel']
             assert type(self.num_parallel) is int, "num_parallel must be an integer"

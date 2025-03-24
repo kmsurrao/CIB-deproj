@@ -8,7 +8,7 @@ from generate_maps import *
 from utils import *
 
 
-def setup_pyilc(inp, env, beta, suppress_printing=False, inflated=False, standard_ilc=False, no_cib=False):
+def setup_pyilc(inp, env, beta, suppress_printing=False, inflated=False, standard_ilc=False, no_cib=False, moment_deproj=False):
     '''
     Sets up yaml files for pyilc and runs the code
 
@@ -21,6 +21,7 @@ def setup_pyilc(inp, env, beta, suppress_printing=False, inflated=False, standar
     inflated: Bool, whether or not to use inflated CIB frequency maps
     standard_ilc: Bool, whether to use a standard ILC without CIB deprojection
     no_cib: Bool, if True, use maps without CIB included
+    moment_deproj: Bool, if True, deproject both beta and first moment w.r.t. beta
 
     RETURNS
     -------
@@ -31,7 +32,9 @@ def setup_pyilc(inp, env, beta, suppress_printing=False, inflated=False, standar
     
     pyilc_input_params = {}
     inflated_str = 'inflated' if inflated else 'uninflated'
-    if not standard_ilc:
+    if moment_deproj:
+        pyilc_input_params['output_dir'] = str(inp.output_dir) + f"/pyilc_outputs/final/"
+    elif not standard_ilc:
         pyilc_input_params['output_dir'] = str(inp.output_dir) + f"/pyilc_outputs/beta_{beta:.3f}_{inflated_str}/"
     else:
         pyilc_input_params['output_dir'] = str(inp.output_dir) + f"/pyilc_outputs/{inflated_str}/"
@@ -49,7 +52,7 @@ def setup_pyilc(inp, env, beta, suppress_printing=False, inflated=False, standar
         pyilc_input_params['wavelet_type'] = "GaussianNeedlets"
         pyilc_input_params['GN_FWHM_arcmin'] = [inp.GN_FWHM_arcmin[i] for i in range(len(inp.GN_FWHM_arcmin))]
         pyilc_input_params['N_scales'] = len(inp.GN_FWHM_arcmin)+1
-    pyilc_input_params['taper_width'] = 200
+    pyilc_input_params['taper_width'] = 0
     
     pyilc_input_params['N_freqs'] = len(inp.frequencies)
     if inp.cib_decorr:
@@ -76,7 +79,10 @@ def setup_pyilc(inp, env, beta, suppress_printing=False, inflated=False, standar
 
     pyilc_input_params['N_side'] = inp.nside
     pyilc_input_params['ILC_preserved_comp'] = 'tSZ'
-    if not standard_ilc:
+    if moment_deproj:
+        pyilc_input_params['N_deproj'] = 2
+        pyilc_input_params['ILC_deproj_comps'] = ['CIB', 'CIB_dbeta']
+    elif not standard_ilc:
         pyilc_input_params['N_deproj'] = 1
         pyilc_input_params['ILC_deproj_comps'] = ['CIB']
     else:
@@ -105,7 +111,11 @@ def setup_pyilc(inp, env, beta, suppress_printing=False, inflated=False, standar
         print(f'generated ILC maps for beta={beta:.3f}, inflated={inflated}', flush=True)
     beta_str = f'beta_{beta:.3f}_' if not standard_ilc else ''
     deproj_str = '_deproject_CIB' if not standard_ilc else ''
-    ymap = hp.read_map(f"{inp.output_dir}/pyilc_outputs/{beta_str}{inflated_str}/needletILCmap_component_tSZ{deproj_str}.fits")
+    if moment_deproj:
+        deproj_str += '_CIB_dbeta'
+        ymap = hp.read_map(f"{inp.output_dir}/pyilc_outputs/final/needletILCmap_component_tSZ{deproj_str}.fits")
+    else:
+        ymap = hp.read_map(f"{inp.output_dir}/pyilc_outputs/{beta_str}{inflated_str}/needletILCmap_component_tSZ{deproj_str}.fits")
     
     
     return ymap

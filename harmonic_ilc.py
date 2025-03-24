@@ -63,11 +63,10 @@ def get_Rlij_inv(inp, freq_alm):
     return Rlij_inv #index as Rlij_inv[l,i,j]
     
 
-def weights(inp, Rlij_inv, signal_sed, contam_sed=None):
+def weights(Rlij_inv, signal_sed, contam_sed=None):
     '''
     ARGUMENTS
     ---------
-    inp: Info object containing input parameter specifications
     Rlij_inv: (ellmax+1, Nfreqs, Nfreqs) 
         ndarray containing inverse Rij matrix at each ell
     signal_sed: array-like of length Nfreqs containing spectral response
@@ -134,7 +133,7 @@ def HILC_map(inp, beta, signal_sed, contam_sed=None, inflated=False, no_cib=Fals
         freq_alm = get_alm(inp, [f'{inp.output_dir}/maps/{inflated_str}_{freq}.fits' for freq in inp.frequencies])
    
     Rlij_inv = get_Rlij_inv(inp, freq_alm)
-    w = weights(inp, Rlij_inv, signal_sed, contam_sed)
+    w = weights(Rlij_inv, signal_sed, contam_sed)
 
     hilc_map = np.zeros(12*inp.nside**2, dtype=np.float32)
     for i, alm_orig in enumerate(freq_alm):

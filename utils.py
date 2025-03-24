@@ -18,7 +18,11 @@ def write_beta_yamls(inp):
     -------
     None
     '''
-    for beta in inp.beta_arr:
+    if inp.beta_fid not in inp.beta_arr:
+        betas_here = [beta for beta in inp.beta_arr] + [inp.beta_fid]
+    else:
+        betas_here = inp.beta_arr
+    for beta in betas_here:
         pars = {'beta_CIB': float(beta), 'Tdust_CIB': 24.0, 'nu0_CIB_ghz':353.0, 'kT_e_keV':5.0, 'nu0_radio_ghz':150.0, 'beta_radio': -0.5}
         beta_yaml = f'{inp.output_dir}/pyilc_yaml_files/beta_{beta:.3f}.yaml'
         with open(beta_yaml, 'w') as outfile:
@@ -26,48 +30,42 @@ def write_beta_yamls(inp):
     return
 
 
-def setup_output_dir(inp, env, standard_ilc=False):
+def setup_output_dir(inp, standard_ilc=False):
     '''
     Sets up directory for output files
 
     ARGUMENTS
     ---------
     inp: Info() object containing input specifications
-    env: environment object
     standard_ilc: Bool, whether running standard ILC without CIB deprojection
 
     RETURNS
     -------
     None
     '''
-    if not os.path.isdir(inp.output_dir):
-        subprocess.call(f'mkdir {inp.output_dir}', shell=True, env=env)
-    if not os.path.isdir(f'{inp.output_dir}/maps'):
-        subprocess.call(f'mkdir {inp.output_dir}/maps', shell=True, env=env)
-    if not os.path.isdir(f'{inp.output_dir}/results_test'):
-        subprocess.call(f'mkdir {inp.output_dir}/results_test', shell=True, env=env)
-    if not os.path.isdir(f'{inp.output_dir}/correlation_plots'):
-        subprocess.call(f'mkdir {inp.output_dir}/correlation_plots', shell=True, env=env)
-    if not os.path.isdir(f'{inp.output_dir}/pyilc_yaml_files'):
-        subprocess.call(f'mkdir {inp.output_dir}/pyilc_yaml_files', shell=True, env=env)
-    if not os.path.isdir(f'{inp.output_dir}/pyilc_outputs'):
-        subprocess.call(f'mkdir {inp.output_dir}/pyilc_outputs', shell=True, env=env)
+    os.makedirs(inp.output_dir, exist_ok=True)
+    os.makedirs(f'{inp.output_dir}/pickle_files', exist_ok=True)
+    os.makedirs(f'{inp.output_dir}/plots', exist_ok=True)
+    os.makedirs(f'{inp.output_dir}/maps', exist_ok=True)
+    os.makedirs(f'{inp.output_dir}/correlation_plots', exist_ok=True)
+    os.makedirs(f'{inp.output_dir}/pyilc_yaml_files', exist_ok=True)
+    os.makedirs(f'{inp.output_dir}/pyilc_outputs', exist_ok=True)
     inflation_strs = ['uninflated', 'inflated']
     if not standard_ilc:
         write_beta_yamls(inp)
         for beta in inp.beta_arr:
             for i in inflation_strs:
-                if not os.path.isdir(f'{inp.output_dir}/pyilc_outputs/beta_{beta:.3f}_{i}'):
-                    subprocess.call(f'mkdir {inp.output_dir}/pyilc_outputs/beta_{beta:.3f}_{i}', shell=True, env=env)
+                os.makedirs(f'{inp.output_dir}/pyilc_outputs/beta_{beta:.3f}_{i}', exist_ok=True)
     for i in inflation_strs:
-        if not os.path.isdir(f'{inp.output_dir}/pyilc_outputs/{i}'):
-            subprocess.call(f'mkdir {inp.output_dir}/pyilc_outputs/{i}', shell=True, env=env)
+        os.makedirs(f'{inp.output_dir}/pyilc_outputs/{i}', exist_ok=True)
         if not standard_ilc:
             break
     
     # directory for final y-map
-    if not os.path.isdir(f'{inp.output_dir}/pyilc_outputs/final'):
-        subprocess.call(f'mkdir {inp.output_dir}/pyilc_outputs/final', shell=True, env=env)
+    os.makedirs(f'{inp.output_dir}/pyilc_outputs/final', exist_ok=True)
+
+    # directory for y-map with dbeta deprojection
+    os.makedirs(f'{inp.output_dir}/pyilc_outputs/moment_deproj', exist_ok=True)
 
     return
 

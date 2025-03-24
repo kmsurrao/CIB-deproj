@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from input import Info
 from halo2map import halodir2map, halofile2map
 from cross_corr import cov, compare_chi2_star
-from get_y_map import get_all_ymaps_star
+from get_y_map import get_all_ymaps_star, setup_pyilc
 from generate_maps import get_freq_maps
 from harmonic_ilc import HILC_map
 from beta_per_bin import get_all_1sigma_beta, predict_with_uncertainty, model
@@ -33,7 +33,7 @@ def main():
 
     # set up output directory
     env = os.environ.copy()
-    setup_output_dir(inp, env)
+    setup_output_dir(inp)
     
     # get map of halos and maps at each frequency (both with and without inflated CIB)
     if inp.halo_catalog is not None:                                                  
@@ -54,29 +54,30 @@ def main():
     standard_ILC_file = f'{inp.output_dir}/pyilc_outputs/uninflated/needletILCmap_component_tSZ.fits'
     if not os.path.isfile(standard_ILC_file):
         get_freq_maps(inp, no_cib=True)
-        HILC_map(inp, 1.0, signal_sed, contam_sed=None, inflated=False, no_cib=True)
+        yopt = HILC_map(inp, 1.0, signal_sed, contam_sed=None, inflated=False, no_cib=True)
 
 
     # Build ILC y-maps (deprojecting beta)
     print('Building y-maps...', flush=True)
     pool = mp.Pool(inp.num_parallel)
     inputs = [(inp, beta) for beta in inp.beta_arr]
-    _ = list(tqdm.tqdm(pool.imap(get_all_ymaps_star, inputs), total=len(inp.beta_arr)))
+    if inp.beta_fid not in inp.beta_arr:
+        inputs.append((inp, inp.beta_fid))
+    _ = list(tqdm.tqdm(pool.imap(get_all_ymaps_star, inputs), total=len(inputs)))
     pool.close()
     
 
     # Compute covariance matrix
-    mean_beta = inp.beta_arr[len(inp.beta_arr)//2]
-    print(f'\nComputing covariance matrix using beta={mean_beta:0.3f}...', flush=True)
+    print(f'\nComputing covariance matrix using beta={inp.beta_fid:0.3f}...', flush=True)
     if os.path.isfile(f'{inp.output_dir}/correlation_plots/cov_hytrue.p'):
         inp.cov_hytrue = pickle.load(open(f'{inp.output_dir}/correlation_plots/cov_hytrue.p', 'rb'))
     else:   
-        inp.cov_hytrue = cov(inp, mean_beta, h, inflated=False) 
+        inp.cov_hytrue = cov(inp, inp.beta_fid, h, inflated=False) 
         pickle.dump(inp.cov_hytrue, open(f'{inp.output_dir}/correlation_plots/cov_hytrue.p', 'wb'))
     if os.path.isfile(f'{inp.output_dir}/correlation_plots/cov_hyinfl.p'):
         inp.cov_hyinfl = pickle.load(open(f'{inp.output_dir}/correlation_plots/cov_hyinfl.p', 'rb'))
     else:
-        inp.cov_hyinfl = cov(inp, mean_beta, h, inflated=True) 
+        inp.cov_hyinfl = cov(inp, inp.beta_fid, h, inflated=True) 
         pickle.dump(inp.cov_hyinfl, open(f'{inp.output_dir}/correlation_plots/cov_hyinfl.p', 'wb'))
 
 
@@ -91,9 +92,9 @@ def main():
     chi2_true_arr = results[:,0].T # shape (Nbins, Nbetas)
     chi2_inflated_arr = results[:,1].T # shape (Nbins, Nbetas)
     print('\nGot chi2 values for each ell bin and beta value', flush=True)
-    pickle.dump(inp.beta_arr, open(f'{inp.output_dir}/beta_arr.p', 'wb'))
-    pickle.dump(chi2_true_arr, open(f'{inp.output_dir}/chi2_true_arr.p', 'wb'))
-    pickle.dump(chi2_inflated_arr, open(f'{inp.output_dir}/chi2_inflated_arr.p', 'wb'))
+    pickle.dump(inp.beta_arr, open(f'{inp.output_dir}/pickle_files/beta_arr.p', 'wb'))
+    pickle.dump(chi2_true_arr, open(f'{inp.output_dir}/pickle_files/chi2_true_arr.p', 'wb'))
+    pickle.dump(chi2_inflated_arr, open(f'{inp.output_dir}/pickle_files/chi2_inflated_arr.p', 'wb'))
 
     # Get mean ells in each bin
     ells = np.arange(inp.ellmax+1)
@@ -101,14 +102,15 @@ def main():
     res = stats.binned_statistic(ells[inp.ellmin:], ells[inp.ellmin:], statistic='mean', bins=Nbins)
     inp.mean_ells = (res[1][:-1]+res[1][1:])/2
     inp.bin_edges = res[1]
+    bin_number = res[2]
 
 
     # Fit best beta with 1sigma range for every ell bin, and save
     means_true, uppers_true, lowers_true, means_infl, uppers_infl, lowers_infl = get_all_1sigma_beta(inp, chi2_true_arr, chi2_inflated_arr)
-    pickle.dump([means_true, uppers_true, lowers_true, means_infl, uppers_infl, lowers_infl], open(f'{inp.output_dir}/beta_points_per_ell.p', 'wb'))
+    pickle.dump([means_true, uppers_true, lowers_true, means_infl, uppers_infl, lowers_infl], open(f'{inp.output_dir}/pickle_files/beta_points_per_ell.p', 'wb'))
     best_fit_true, fit_err_true, popt_true = predict_with_uncertainty(inp.mean_ells, means_true, lowers_true, uppers_true, deg=3)
     best_fit_infl, fit_err_infl, popt_infl = predict_with_uncertainty(inp.mean_ells, means_infl, lowers_infl, uppers_infl, deg=3)
-    pickle.dump([best_fit_true, fit_err_true, popt_true, best_fit_infl, fit_err_infl, popt_infl], open(f'{inp.output_dir}/best_fits.p', 'wb'))
+    pickle.dump([best_fit_true, fit_err_true, popt_true, best_fit_infl, fit_err_infl, popt_infl], open(f'{inp.output_dir}/pickle_files/best_fits.p', 'wb'))
     
 
     # Plot beta with error bars and best fit with error at each ell
@@ -124,20 +126,98 @@ def main():
     plt.xlim(inp.ellmin, inp.ellmax)
     plt.title(r'$\alpha=$'+f'{inp.alpha:.1f}', fontsize=18)
     plt.grid()
-    plt.savefig(f'{inp.output_dir}/beta_per_ell.pdf', bbox_inches='tight')
+    plt.savefig(f'{inp.output_dir}/plots/beta_per_ell.pdf', bbox_inches='tight')
 
 
     # build final y-maps, deprojecting optimal beta for each ell bin separately
     print('Building final y-map, deprojecting optimal beta in each bin...')
-    for i in range(2):
-        popt = popt_infl if i==0 else popt_true
+    for i in range(2):  
         pipeline_str = 'realistic' if i==0 else 'idealized'
-        beta_vs_ell = model(ells, *popt)
+        #popt = popt_infl if i==0 else popt_true
+        #beta_vs_ell = model(ells, *popt)
+        mean_betas = means_infl if i==0 else means_true
+        bin_inds = bin_number - 1
+        beta_vs_ell = np.zeros_like(ells, dtype=np.float32)
+        beta_vs_ell[inp.ellmin:] = mean_betas[bin_inds] # below ellmin not used
         contam_sed = cib_spectral_response(inp.frequencies, delta_bandpasses=delta_bandpasses, \
                                            inp=inp, beta=beta_vs_ell) # shape (Nfreqs, ellmax+1)
         fname = f"{inp.output_dir}/pyilc_outputs/final/needletILCmap_component_tSZ_deproject_CIB_{pipeline_str}.fits"
         HILC_map(inp, None, signal_sed, contam_sed=contam_sed, inflated=False, no_cib=False, fname=fname)
     print('Saved final y-maps, built with both the realistic and idealized pipelines.')
+
+
+    # build map deprojecting first moment w.r.t. beta, for comparison
+    print(f'Building y-map, deprojecting both beta and first moment, using fiducial beta={inp.beta_fid}')
+    y_beta_dbeta = setup_pyilc(inp, env, inp.beta_fid, moment_deproj=True)
+
+
+    # plots comparing final y-map to y-map with dbeta deprojection
+    y_beta = hp.read_map(f"{inp.output_dir}/pyilc_outputs/final/needletILCmap_component_tSZ_deproject_CIB_realistic.fits")
+    ytrue = hp.ud_grade(hp.read_map(inp.tsz_map_file), inp.nside)
+    hxy_beta = binned(hp.anafast(h, y_beta, lmax=inp.ellmax))
+    hxy_beta_dbeta = binned(hp.anafast(h, y_beta_dbeta, lmax=inp.ellmax))
+    y_beta_dbetaxy_beta_dbeta = binned(hp.anafast(y_beta_dbeta, lmax=inp.ellmax))
+    y_betaxy_beta = binned(hp.anafast(y_beta, lmax=inp.ellmax))
+    ytruexytrue = binned(hp.anafast(ytrue, lmax=inp.ellmax))
+    y_betaxytrue = binned(hp.anafast(y_beta, ytrue, lmax=inp.ellmax))
+    y_beta_dbetaxytrue = binned(hp.anafast(y_beta_dbeta, ytrue, lmax=inp.ellmax))
+    yoptxyopt = binned(hp.anafast(yopt, lmax=inp.ellmax))
+    yoptxytrue = binned(hp.anafast(yopt, ytrue, lmax=inp.ellmax))
+    yoptxh = binned(hp.anafast(yopt, h, lmax=inp.ellmax))
+    hxytrue = binned(hp.anafast(h, ytrue, lmax=inp.ellmax))
+    mean_ells = inp.mean_ells
+    to_dl = mean_ells*(mean_ells+1)/2/np.pi
+    fig, axs = plt.subplots(2,2, figsize=(8,8))
+    axs = axs.flatten()
+    for n, ax in enumerate(axs):
+        plt.axes(ax)
+        if n==0:
+            plt.plot(mean_ells, to_dl*hxy_beta, label=r'$y^{\beta} \times h$')
+            plt.plot(mean_ells, to_dl*hxy_beta_dbeta, label=r'$y^{\beta + d\beta} \times h$')
+            plt.plot(mean_ells, to_dl*yoptxh, label=r'$y^{\rm opt} \times h$', linestyle='dashed')
+            plt.plot(mean_ells, to_dl*hxytrue, label=r'$y_{\rm true} \times h$', linestyle='dashed')
+            plt.legend(fontsize=12)
+            plt.xlabel(r'$\ell$')
+            plt.ylabel(r'$\ell(\ell+1)C_\ell^{hy}/(2\pi)$')
+            plt.grid()
+            plt.xlim(mean_ells, mean_ells)
+            plt.title(r'Cross-spectra of ILC $y$-map with halos', fontsize=14)
+        elif n==1:
+            plt.plot(mean_ells, to_dl*y_betaxy_beta, label=r'$y^{\beta} \times y^{\beta}$')
+            plt.plot(mean_ells, to_dl*y_beta_dbetaxy_beta_dbeta, label=r'$y^{\beta + d\beta} \times y^{\beta + d\beta}$')
+            plt.plot(mean_ells, to_dl*yoptxyopt, label=r'$y^{\rm opt} \times y^{\rm opt}$', linestyle='dashed')
+            plt.plot(mean_ells, to_dl*ytruexytrue, label=r'$y_{\rm true} \times y_{\rm true}$', linestyle='dashed')
+            plt.legend(fontsize=12)
+            plt.xlabel(r'$\ell$')
+            plt.ylabel(r'$\ell(\ell+1)C_\ell^{yy}/(2\pi)$')
+            plt.grid()
+            plt.xlim(mean_ells, mean_ells)
+            plt.yscale('log')
+            plt.title(r'Auto-spectra of ILC $y$-maps', fontsize=14)      
+        elif n==2:
+            plt.plot(mean_ells, to_dl*y_betaxytrue, label=r'$y^{\beta} \times y_{\mathrm{true}}$')
+            plt.plot(mean_ells, to_dl*y_beta_dbetaxytrue, label=r'$y^{\beta+d\beta} \times y_{\mathrm{true}}$')
+            plt.plot(mean_ells, to_dl*yoptxytrue, label=r'$y^{\rm opt} \times y_{\mathrm{true}}$', linestyle='dashed')
+            plt.legend(fontsize=12)
+            plt.xlabel(r'$\ell$')
+            plt.ylabel(r'$\ell(\ell+1)C_\ell^{y,y_{\mathrm{true}}}/(2\pi)$')
+            plt.grid(which='both')
+            plt.xlim(mean_ells, mean_ells)
+            plt.title('Cross-spectra of ILC and true $y$-maps', fontsize=14)
+        elif n==3:
+            plt.plot(mean_ells,y_betaxytrue/np.sqrt(ytruexytrue*y_betaxy_beta), label=r'$y^{\beta} \times y_{\mathrm{true}}$')
+            plt.plot(mean_ells,y_beta_dbetaxytrue/np.sqrt(ytruexytrue*y_beta_dbetaxy_beta_dbeta), label=r'$y^{\beta+d\beta} \times y_{\mathrm{true}}$')
+            plt.plot(mean_ells,yoptxytrue/np.sqrt(ytruexytrue*yoptxyopt), label=r'$y^{\rm opt} \times y^{\rm opt}$', linestyle='dashed')
+            plt.legend(fontsize=12)
+            plt.xlabel(r'$\ell$')
+            plt.ylabel(r'$r_\ell^{y,y_{\mathrm{true}}}$')
+            plt.grid()
+            plt.xlim(mean_ells, mean_ells)
+            plt.title('Corr. coefficients of ILC and true $y$-maps', fontsize=14)
+    plt.tight_layout()
+    plt.savefig(f'{inp.output_dir}/plots/dbeta.pdf', bbox_inches='tight')
+
+
 
     return 
 
