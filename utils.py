@@ -64,9 +64,6 @@ def setup_output_dir(inp, standard_ilc=False):
     # directory for final y-map
     os.makedirs(f'{inp.output_dir}/pyilc_outputs/final', exist_ok=True)
 
-    # directory for y-map with dbeta deprojection
-    os.makedirs(f'{inp.output_dir}/pyilc_outputs/moment_deproj', exist_ok=True)
-
     return
 
 def dBnudT(nu_ghz):

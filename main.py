@@ -55,6 +55,8 @@ def main():
     if not os.path.isfile(standard_ILC_file):
         get_freq_maps(inp, no_cib=True)
         yopt = HILC_map(inp, 1.0, signal_sed, contam_sed=None, inflated=False, no_cib=True)
+    else:
+        yopt = hp.read_map(standard_ILC_file)
 
 
     # Build ILC y-maps (deprojecting beta)
@@ -83,18 +85,24 @@ def main():
 
     # Compute chi2 values
     print('Computing chi2 values...', flush=True)
-    pool = mp.Pool(inp.num_parallel)
-    inputs = [(inp, beta, h) for beta in inp.beta_arr]
-    # results shape: (Nbetas, 2 for chi2_true chi2_infl, Nbins)
-    results = list(tqdm.tqdm(pool.imap(compare_chi2_star, inputs), total=len(inp.beta_arr)))
-    pool.close()
-    results = np.array(results, dtype=np.float32)
-    chi2_true_arr = results[:,0].T # shape (Nbins, Nbetas)
-    chi2_inflated_arr = results[:,1].T # shape (Nbins, Nbetas)
-    print('\nGot chi2 values for each ell bin and beta value', flush=True)
-    pickle.dump(inp.beta_arr, open(f'{inp.output_dir}/pickle_files/beta_arr.p', 'wb'))
-    pickle.dump(chi2_true_arr, open(f'{inp.output_dir}/pickle_files/chi2_true_arr.p', 'wb'))
-    pickle.dump(chi2_inflated_arr, open(f'{inp.output_dir}/pickle_files/chi2_inflated_arr.p', 'wb'))
+    chi2_true_file = f'{inp.output_dir}/pickle_files/chi2_true_arr.p'
+    chi2_infl_file = f'{inp.output_dir}/pickle_files/chi2_inflated_arr.p'
+    if os.path.isfile(chi2_true_file) and os.path.isfile(chi2_infl_file):
+        chi2_true_arr = pickle.load(open(chi2_true_file, 'rb'))
+        chi2_inflated_arr = pickle.load(open(chi2_infl_file, 'rb'))
+    else:
+        pool = mp.Pool(inp.num_parallel)
+        inputs = [(inp, beta, h) for beta in inp.beta_arr]
+        # results shape: (Nbetas, 2 for chi2_true chi2_infl, Nbins)
+        results = list(tqdm.tqdm(pool.imap(compare_chi2_star, inputs), total=len(inp.beta_arr)))
+        pool.close()
+        results = np.array(results, dtype=np.float32)
+        chi2_true_arr = results[:,0].T # shape (Nbins, Nbetas)
+        chi2_inflated_arr = results[:,1].T # shape (Nbins, Nbetas)
+        print('\nGot chi2 values for each ell bin and beta value', flush=True)
+        pickle.dump(inp.beta_arr, open(f'{inp.output_dir}/pickle_files/beta_arr.p', 'wb'))
+        pickle.dump(chi2_true_arr, open(chi2_true_file, 'wb'))
+        pickle.dump(chi2_inflated_arr, open(chi2_infl_file, 'wb'))
 
     # Get mean ells in each bin
     ells = np.arange(inp.ellmax+1)
@@ -133,38 +141,43 @@ def main():
     print('Building final y-map, deprojecting optimal beta in each bin...')
     for i in range(2):  
         pipeline_str = 'realistic' if i==0 else 'idealized'
-        #popt = popt_infl if i==0 else popt_true
-        #beta_vs_ell = model(ells, *popt)
-        mean_betas = means_infl if i==0 else means_true
-        bin_inds = bin_number - 1
-        beta_vs_ell = np.zeros_like(ells, dtype=np.float32)
-        beta_vs_ell[inp.ellmin:] = mean_betas[bin_inds] # below ellmin not used
+        popt = popt_infl if i==0 else popt_true
+        beta_vs_ell = model(ells, *popt)
+        # mean_betas = np.array(means_infl) if i==0 else np.array(means_true)
+        # bin_inds = bin_number.astype(int) - 1
+        # beta_vs_ell = np.zeros_like(ells, dtype=np.float32)
+        # beta_vs_ell[inp.ellmin:] = mean_betas[bin_inds] # below ellmin not used
         contam_sed = cib_spectral_response(inp.frequencies, delta_bandpasses=delta_bandpasses, \
                                            inp=inp, beta=beta_vs_ell) # shape (Nfreqs, ellmax+1)
         fname = f"{inp.output_dir}/pyilc_outputs/final/needletILCmap_component_tSZ_deproject_CIB_{pipeline_str}.fits"
-        HILC_map(inp, None, signal_sed, contam_sed=contam_sed, inflated=False, no_cib=False, fname=fname)
+        if not os.path.isfile(fname):
+            HILC_map(inp, None, signal_sed, contam_sed=contam_sed, inflated=False, no_cib=False, fname=fname)
     print('Saved final y-maps, built with both the realistic and idealized pipelines.')
 
 
     # build map deprojecting first moment w.r.t. beta, for comparison
     print(f'Building y-map, deprojecting both beta and first moment, using fiducial beta={inp.beta_fid}')
-    y_beta_dbeta = setup_pyilc(inp, env, inp.beta_fid, moment_deproj=True)
+    y_beta_dbeta_file = f'{inp.output_dir}/pyilc_outputs/final/needletILCmap_component_tSZ_deproject_CIB_CIB_dbeta.fits'
+    if not os.path.isfile(y_beta_dbeta_file):
+        y_beta_dbeta = setup_pyilc(inp, env, inp.beta_fid, moment_deproj=True)
+    else:
+        y_beta_dbeta = hp.read_map(y_beta_dbeta_file)
 
 
     # plots comparing final y-map to y-map with dbeta deprojection
     y_beta = hp.read_map(f"{inp.output_dir}/pyilc_outputs/final/needletILCmap_component_tSZ_deproject_CIB_realistic.fits")
     ytrue = hp.ud_grade(hp.read_map(inp.tsz_map_file), inp.nside)
-    hxy_beta = binned(hp.anafast(h, y_beta, lmax=inp.ellmax))
-    hxy_beta_dbeta = binned(hp.anafast(h, y_beta_dbeta, lmax=inp.ellmax))
-    y_beta_dbetaxy_beta_dbeta = binned(hp.anafast(y_beta_dbeta, lmax=inp.ellmax))
-    y_betaxy_beta = binned(hp.anafast(y_beta, lmax=inp.ellmax))
-    ytruexytrue = binned(hp.anafast(ytrue, lmax=inp.ellmax))
-    y_betaxytrue = binned(hp.anafast(y_beta, ytrue, lmax=inp.ellmax))
-    y_beta_dbetaxytrue = binned(hp.anafast(y_beta_dbeta, ytrue, lmax=inp.ellmax))
-    yoptxyopt = binned(hp.anafast(yopt, lmax=inp.ellmax))
-    yoptxytrue = binned(hp.anafast(yopt, ytrue, lmax=inp.ellmax))
-    yoptxh = binned(hp.anafast(yopt, h, lmax=inp.ellmax))
-    hxytrue = binned(hp.anafast(h, ytrue, lmax=inp.ellmax))
+    hxy_beta = binned(inp, hp.anafast(h, y_beta, lmax=inp.ellmax))
+    hxy_beta_dbeta = binned(inp, hp.anafast(h, y_beta_dbeta, lmax=inp.ellmax))
+    y_beta_dbetaxy_beta_dbeta = binned(inp, hp.anafast(y_beta_dbeta, lmax=inp.ellmax))
+    y_betaxy_beta = binned(inp, hp.anafast(y_beta, lmax=inp.ellmax))
+    ytruexytrue = binned(inp, hp.anafast(ytrue, lmax=inp.ellmax))
+    y_betaxytrue = binned(inp, hp.anafast(y_beta, ytrue, lmax=inp.ellmax))
+    y_beta_dbetaxytrue = binned(inp, hp.anafast(y_beta_dbeta, ytrue, lmax=inp.ellmax))
+    yoptxyopt = binned(inp, hp.anafast(yopt, lmax=inp.ellmax))
+    yoptxytrue = binned(inp, hp.anafast(yopt, ytrue, lmax=inp.ellmax))
+    yoptxh = binned(inp, hp.anafast(yopt, h, lmax=inp.ellmax))
+    hxytrue = binned(inp, hp.anafast(h, ytrue, lmax=inp.ellmax))
     mean_ells = inp.mean_ells
     to_dl = mean_ells*(mean_ells+1)/2/np.pi
     fig, axs = plt.subplots(2,2, figsize=(8,8))
@@ -180,7 +193,7 @@ def main():
             plt.xlabel(r'$\ell$')
             plt.ylabel(r'$\ell(\ell+1)C_\ell^{hy}/(2\pi)$')
             plt.grid()
-            plt.xlim(mean_ells, mean_ells)
+            plt.xlim(mean_ells[0], mean_ells[-1])
             plt.title(r'Cross-spectra of ILC $y$-map with halos', fontsize=14)
         elif n==1:
             plt.plot(mean_ells, to_dl*y_betaxy_beta, label=r'$y^{\beta} \times y^{\beta}$')
@@ -191,7 +204,7 @@ def main():
             plt.xlabel(r'$\ell$')
             plt.ylabel(r'$\ell(\ell+1)C_\ell^{yy}/(2\pi)$')
             plt.grid()
-            plt.xlim(mean_ells, mean_ells)
+            plt.xlim(mean_ells[0], mean_ells[-1])
             plt.yscale('log')
             plt.title(r'Auto-spectra of ILC $y$-maps', fontsize=14)      
         elif n==2:
@@ -202,7 +215,7 @@ def main():
             plt.xlabel(r'$\ell$')
             plt.ylabel(r'$\ell(\ell+1)C_\ell^{y,y_{\mathrm{true}}}/(2\pi)$')
             plt.grid(which='both')
-            plt.xlim(mean_ells, mean_ells)
+            plt.xlim(mean_ells[0], mean_ells[-1])
             plt.title('Cross-spectra of ILC and true $y$-maps', fontsize=14)
         elif n==3:
             plt.plot(mean_ells,y_betaxytrue/np.sqrt(ytruexytrue*y_betaxy_beta), label=r'$y^{\beta} \times y_{\mathrm{true}}$')
@@ -212,7 +225,7 @@ def main():
             plt.xlabel(r'$\ell$')
             plt.ylabel(r'$r_\ell^{y,y_{\mathrm{true}}}$')
             plt.grid()
-            plt.xlim(mean_ells, mean_ells)
+            plt.xlim(mean_ells[0], mean_ells[-1])
             plt.title('Corr. coefficients of ILC and true $y$-maps', fontsize=14)
     plt.tight_layout()
     plt.savefig(f'{inp.output_dir}/plots/dbeta.pdf', bbox_inches='tight')

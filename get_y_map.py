@@ -46,12 +46,7 @@ def setup_pyilc(inp, env, beta, suppress_printing=False, inflated=False, standar
     
     pyilc_input_params['ELLMAX'] = inp.ellmax
     pyilc_input_params['BinSize'] = inp.ells_per_bin
-    if inp.ILC_type == 'harmonic':
-        pyilc_input_params['wavelet_type'] = 'TopHatHarmonic' 
-    elif inp.ILC_type == 'needlet':
-        pyilc_input_params['wavelet_type'] = "GaussianNeedlets"
-        pyilc_input_params['GN_FWHM_arcmin'] = [inp.GN_FWHM_arcmin[i] for i in range(len(inp.GN_FWHM_arcmin))]
-        pyilc_input_params['N_scales'] = len(inp.GN_FWHM_arcmin)+1
+    pyilc_input_params['wavelet_type'] = 'TopHatHarmonic' 
     pyilc_input_params['taper_width'] = 0
     
     pyilc_input_params['N_freqs'] = len(inp.frequencies)
