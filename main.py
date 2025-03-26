@@ -138,7 +138,7 @@ def main():
 
 
     # build final y-maps, deprojecting optimal beta for each ell bin separately
-    print('Building final y-map, deprojecting optimal beta in each bin...')
+    print('Building final y-map, deprojecting optimal beta in each bin...', flush=True)
     for i in range(2):  
         pipeline_str = 'realistic' if i==0 else 'idealized'
         popt = popt_infl if i==0 else popt_true
@@ -152,11 +152,11 @@ def main():
         fname = f"{inp.output_dir}/pyilc_outputs/final/needletILCmap_component_tSZ_deproject_CIB_{pipeline_str}.fits"
         if not os.path.isfile(fname):
             HILC_map(inp, None, signal_sed, contam_sed=contam_sed, inflated=False, no_cib=False, fname=fname)
-    print('Saved final y-maps, built with both the realistic and idealized pipelines.')
+    print('Saved final y-maps, built with both the realistic and idealized pipelines.', flush=True)
 
 
     # build map deprojecting first moment w.r.t. beta, for comparison
-    print(f'Building y-map, deprojecting both beta and first moment, using fiducial beta={inp.beta_fid}')
+    print(f'Building y-map, deprojecting both beta and first moment, using fiducial beta={inp.beta_fid}', flush=True)
     y_beta_dbeta_file = f'{inp.output_dir}/pyilc_outputs/final/needletILCmap_component_tSZ_deproject_CIB_CIB_dbeta.fits'
     if not os.path.isfile(y_beta_dbeta_file):
         y_beta_dbeta = setup_pyilc(inp, env, inp.beta_fid, moment_deproj=True)

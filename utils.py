@@ -53,7 +53,9 @@ def setup_output_dir(inp, standard_ilc=False):
     inflation_strs = ['uninflated', 'inflated']
     if not standard_ilc:
         write_beta_yamls(inp)
-        for beta in inp.beta_arr:
+        if inp.beta_fid not in inp.beta_arr:
+            betas_here = [beta for beta in inp.beta_arr] + [inp.beta_fid]
+        for beta in betas_here:
             for i in inflation_strs:
                 os.makedirs(f'{inp.output_dir}/pyilc_outputs/beta_{beta:.3f}_{i}', exist_ok=True)
     for i in inflation_strs:
