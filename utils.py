@@ -1,6 +1,4 @@
 import numpy as np
-import healpy as hp
-import subprocess
 import os
 import yaml
 from scipy import stats
@@ -55,6 +53,8 @@ def setup_output_dir(inp, standard_ilc=False):
         write_beta_yamls(inp)
         if inp.beta_fid not in inp.beta_arr:
             betas_here = [beta for beta in inp.beta_arr] + [inp.beta_fid]
+        else:
+            betas_here = inp.beta_arr
         for beta in betas_here:
             for i in inflation_strs:
                 os.makedirs(f'{inp.output_dir}/pyilc_outputs/beta_{beta:.3f}_{i}', exist_ok=True)

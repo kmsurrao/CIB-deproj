@@ -3,7 +3,7 @@
 nside: 1024 
 
 # maximum ell for which to compute chi^2 and perform ILC
-ellmax: 3000
+ellmax: 2000
 
 # minimum ell for which to compute chi^2 and perform ILC (default is 2)
 ellmin: 2

@@ -5,9 +5,10 @@ import numpy as np
 import multiprocessing as mp
 import pickle
 import matplotlib.pyplot as plt
+import healpy as hp
 from input import Info
 from halo2map import halodir2map, halofile2map
-from cross_corr import cov, compare_chi2_star
+from cross_corr import harmonic_space_cov, cov, compare_chi2_star
 from get_y_map import get_all_ymaps_star, setup_pyilc
 from generate_maps import get_freq_maps
 from harmonic_ilc import HILC_map
@@ -141,12 +142,12 @@ def main():
     print('Building final y-map, deprojecting optimal beta in each bin...', flush=True)
     for i in range(2):  
         pipeline_str = 'realistic' if i==0 else 'idealized'
-        popt = popt_infl if i==0 else popt_true
-        beta_vs_ell = model(ells, *popt)
-        # mean_betas = np.array(means_infl) if i==0 else np.array(means_true)
-        # bin_inds = bin_number.astype(int) - 1
-        # beta_vs_ell = np.zeros_like(ells, dtype=np.float32)
-        # beta_vs_ell[inp.ellmin:] = mean_betas[bin_inds] # below ellmin not used
+        # popt = popt_infl if i==0 else popt_true
+        # beta_vs_ell = model(ells, *popt)
+        mean_betas = np.array(means_infl) if i==0 else np.array(means_true)
+        bin_inds = bin_number.astype(int) - 1
+        beta_vs_ell = np.zeros_like(ells, dtype=np.float32)
+        beta_vs_ell[inp.ellmin:] = mean_betas[bin_inds] # below ellmin not used
         contam_sed = cib_spectral_response(inp.frequencies, delta_bandpasses=delta_bandpasses, \
                                            inp=inp, beta=beta_vs_ell) # shape (Nfreqs, ellmax+1)
         fname = f"{inp.output_dir}/pyilc_outputs/final/needletILCmap_component_tSZ_deproject_CIB_{pipeline_str}.fits"
@@ -185,7 +186,8 @@ def main():
     for n, ax in enumerate(axs):
         plt.axes(ax)
         if n==0:
-            plt.plot(mean_ells, to_dl*hxy_beta, label=r'$y^{\beta} \times h$')
+            hxy_beta_cov = harmonic_space_cov(inp, y_beta, np.zeros_like(y_beta), h)
+            plt.errorbar(mean_ells, to_dl*hxy_beta, yerr=to_dl*np.diag(hxy_beta_cov), label=r'$y^{\beta} \times h$')
             plt.plot(mean_ells, to_dl*hxy_beta_dbeta, label=r'$y^{\beta + d\beta} \times h$')
             plt.plot(mean_ells, to_dl*yoptxh, label=r'$y^{\rm opt} \times h$', linestyle='dashed')
             plt.plot(mean_ells, to_dl*hxytrue, label=r'$y_{\rm true} \times h$', linestyle='dashed')

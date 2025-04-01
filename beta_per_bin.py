@@ -64,14 +64,26 @@ def get_all_1sigma_beta(inp, chi2_true, chi2_infl):
     Nbins = len(chi2_true)
     for a in range(Nbins):
         x_min, x2, x1 = compute_1sigma_beta(inp, chi2_true[a], a)
+        upper = x2-x_min
+        lower = x_min-x1
+        if upper == 0:
+            upper = float('inf')
+        if lower == 0:
+            lower = float('inf')
         means_true.append(x_min)
-        uppers_true.append(x2-x_min)
-        lowers_true.append(x_min-x1)
+        uppers_true.append(upper)
+        lowers_true.append(lower)
     for a in range(Nbins):
         x_min, x2, x1 = compute_1sigma_beta(inp, chi2_infl[a], a)
+        upper = x2-x_min
+        lower = x_min-x1
+        if upper == 0:
+            upper = float('inf')
+        if lower == 0:
+            lower = float('inf')
         means_infl.append(x_min)
-        uppers_infl.append(x2-x_min)
-        lowers_infl.append(x_min-x1)
+        uppers_infl.append(upper)
+        lowers_infl.append(lower)
     return means_true, uppers_true, lowers_true, means_infl, uppers_infl, lowers_infl
 
 
