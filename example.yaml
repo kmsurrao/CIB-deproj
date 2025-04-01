@@ -108,7 +108,7 @@ halo_catalog: '/scratch/09334/ksurrao/halo_files/haloslc_agora_zsel_0.8_to_1.8_M
 pyilc_path: '/work2/09334/ksurrao/stampede3/Github/pyilc'
 
 # directory in which to save outputs
-output_dir: '/scratch/09334/ksurrao/cib_deproj_032425/planck1p0_highz_decorr_alpha1_bin200'
+output_dir: '/scratch/09334/ksurrao/cib_deproj_040125/planck1p0_highz_decorr_alpha1_bin200'
 
 # If debug is True, there will be more intermediate printing
 debug: False

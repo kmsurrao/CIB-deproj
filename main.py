@@ -187,7 +187,7 @@ def main():
         plt.axes(ax)
         if n==0:
             hxy_beta_cov = harmonic_space_cov(inp, y_beta, np.zeros_like(y_beta), h)
-            plt.errorbar(mean_ells, to_dl*hxy_beta, yerr=to_dl*np.diag(hxy_beta_cov), label=r'$y^{\beta} \times h$')
+            plt.errorbar(mean_ells, to_dl*hxy_beta, yerr=to_dl*np.sqrt(np.diag(hxy_beta_cov)), label=r'$y^{\beta} \times h$')
             plt.plot(mean_ells, to_dl*hxy_beta_dbeta, label=r'$y^{\beta + d\beta} \times h$')
             plt.plot(mean_ells, to_dl*yoptxh, label=r'$y^{\rm opt} \times h$', linestyle='dashed')
             plt.plot(mean_ells, to_dl*hxytrue, label=r'$y_{\rm true} \times h$', linestyle='dashed')

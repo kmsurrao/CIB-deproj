@@ -4,42 +4,102 @@ import scipy.optimize as opt
 from scipy.optimize import least_squares
 
 
-def compute_1sigma_beta(inp, chi2_arr, a):
-    '''
+def compute_1sigma_beta(inp, chi2_arr,  a):
+    """
     ARGUMENTS
     ---------
     inp: Info object containing input parameter specifications
-    chi2_arr: (Nbetas, ) array containing chi2 value using deprojection
-        of the CIB with each value beta, for bin a 
+    chi2_arr: (Nbetas,) array containing chi^2 value using deprojection
+        of the CIB with each value beta, for bin 'a'.
     a: int, bin number
 
     RETURNS
     -------
-    x_min: float, beta with minimum chi2
-    x2: float, beta at high end of 1sigma range
-    x1: float, beta at low end of 1sigma range
-    '''
-    x_vals = inp.beta_arr
+    x_min : float, beta with minimum chi^2
+    x_hi  : float, beta at high end of 1-sigma range
+    x_lo  : float, beta at low end of 1-sigma range
+    """
+    # 1) Interpolate
+    x_vals = np.array(inp.beta_arr)
     y_vals = chi2_arr
     kind = 'cubic' if len(x_vals) >= 4 else 'linear'
     spline = interp.interp1d(x_vals, y_vals, kind=kind)
-    x_min = x_vals[np.argmin(y_vals)]
-    y_min = np.amin(y_vals)
-    target_value = y_min + 1
+
+    # 2) Find overall minimum
+    idx_min = np.argmin(y_vals)
+    x_min = x_vals[idx_min]
+    y_min = y_vals[idx_min]
+
+    # We'll search for f(x) = target_value on each side of x_min
+    target_value = y_min + 1.0
+
     def equation(x):
         return spline(x) - target_value
-    # Find the two x-values where f(x) = 1 + f(x_min)
-    try:
-        x1 = opt.brentq(equation, x_vals[0], x_min)  # Left side
-    except Exception:
-        print(f'trouble finding lower error for beta in bin {a}, setting to x1={inp.beta_arr[0]}. Run again including lower beta values for best results.')
-        x1 = inp.beta_arr[0]
-    try:
-        x2 = opt.brentq(equation, x_min, x_vals[-1])  # Right side
-    except Exception:
-        print(f'trouble finding upper error for beta bin {a}, setting to x2={inp.beta_arr[-1]}. Run again including higher beta values for best results.')
-        x2 = inp.beta_arr[-1]
-    return x_min, x2, x1
+
+    # Helper: bracket-based root finder on intervals that show a sign change
+    def bracketed_roots(fun, xs):
+        """
+        fun: callable, the function for which we want to find fun(x) = 0
+        xs : sorted array of x-values spanning some region
+        Returns all roots found by scanning adjacent intervals for a sign change
+        """
+        roots_found = []
+        fvals = [fun(x) for x in xs]
+        for i in range(len(xs) - 1):
+            f1, f2 = fvals[i], fvals[i+1]
+            if f1 == 0.0:
+                # Exactly zero at boundary
+                roots_found.append(xs[i])
+            elif f1 * f2 < 0.0:
+                # Sign change -> bracket
+                x_left, x_right = xs[i], xs[i+1]
+                try:
+                    r = opt.brentq(fun, x_left, x_right)
+                    roots_found.append(r)
+                except ValueError:
+                    pass  # No solution in that bracket
+        return roots_found
+
+    # 3) Search on the left side of x_min
+    #    i.e. all beta <= x_min
+    left_side = x_vals[x_vals <= x_min]
+    # Sort in ascending order (just in case)
+    left_side = np.sort(left_side)
+    roots_left = bracketed_roots(equation, left_side)
+    if len(roots_left) == 0:
+        # Fallback if we cannot find a crossing
+        print(f"Trouble finding lower 1-sigma intersection for beta in bin {a}. "
+              f"Setting x_lo = {left_side[0]:.3f}")
+        x_lo = left_side[0]
+    else:
+        # Pick the root that is closest to x_min from below
+        # i.e. the largest among roots_left but still <= x_min
+        valid_left = [r for r in roots_left if r <= x_min]
+        if len(valid_left) == 0:
+            # If all found roots are above x_min, fallback
+            x_lo = left_side[0]
+        else:
+            x_lo = max(valid_left)
+
+    # 4) Search on the right side of x_min
+    right_side = x_vals[x_vals >= x_min]
+    right_side = np.sort(right_side)
+    roots_right = bracketed_roots(equation, right_side)
+    if len(roots_right) == 0:
+        print(f"Trouble finding upper 1-sigma intersection for beta in bin {a}. "
+              f"Setting x_hi = {right_side[-1]:.3f}")
+        x_hi = right_side[-1]
+    else:
+        # Pick the root that is closest to x_min from above
+        # i.e. the smallest among roots_right but still >= x_min
+        valid_right = [r for r in roots_right if r >= x_min]
+        if len(valid_right) == 0:
+            # If all found roots are below x_min, fallback
+            x_hi = right_side[-1]
+        else:
+            x_hi = min(valid_right)
+
+    return x_min, x_hi, x_lo
 
 
 def get_all_1sigma_beta(inp, chi2_true, chi2_infl):
