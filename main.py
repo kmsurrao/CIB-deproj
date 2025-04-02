@@ -232,6 +232,8 @@ def main():
     plt.tight_layout()
     plt.savefig(f'{inp.output_dir}/plots/dbeta.pdf', bbox_inches='tight')
 
+    print('Completed.', flush=True)
+
 
 
     return 

@@ -9,10 +9,10 @@ import concurrent.futures
 nside = 1024
 
 
-base_dir = '/scratch/09334/ksurrao/cib_deproj_013125/highzhalos/planck_1p0noise_cibdecorr_highfreqspecial_highzhalos_alpha1'
+base_dir = '/scratch/09334/ksurrao/cib_deproj_040125/planck1p0_highz_decorr_alpha1_bin200'
 h = hp.read_map(f'{base_dir}/maps/halo.fits') 
-y_beta = hp.read_map(f'{base_dir}/pyilc_outputs/beta_1.690_uninflated/needletILCmap_component_tSZ_deproject_CIB.fits')
-y_beta_dbeta = hp.read_map(f'{base_dir}/moment_deproj/needletILCmap_component_tSZ_deproject_CIB_CIB_dbeta.fits')
+y_beta = hp.read_map(f'{base_dir}/pyilc_outputs/final/needletILCmap_component_tSZ_deproject_CIB_realistic.fits')
+y_beta_dbeta = hp.read_map(f'{base_dir}/pyilc_outputs/final/needletILCmap_component_tSZ_deproject_CIB_CIB_dbeta.fits')
 ytrue = hp.ud_grade(hp.read_map('/scratch/09334/ksurrao/agora_planck/tsz_2048.fits'), nside)
 halo_catalog = '/scratch/09334/ksurrao/halo_files/haloslc_agora_zsel_0.8_to_1.8_Msel_1e12_to_1e15_rot120.h5'
 odir = '/work2/09334/ksurrao/stampede3/Github/CIB-deproj/stacks'
