@@ -104,7 +104,7 @@ def get_freq_maps(inp, no_cib=False):
             cib_map = hp.read_map(f'{inp.cib_map_dir}/mdpl2_len_mag_cibmap_planck_{freq}_uk.fits')
         else:
             cib_353 = hp.read_map(f'{inp.cib_map_dir}/mdpl2_len_mag_cibmap_planck_353_uk.fits')
-            cib_map = cib_353/cib_spectral_response([353])[0]*cib_spectral_response([freq])[0]
+            cib_map = cib_353/cib_spectral_response([353])*cib_spectral_response([freq])
         cib_map = 10**(-6)*hp.ud_grade(cib_map, inp.nside) #units of K
         cib_map = initial_masking(inp, cib_map, cib_map_143)
         additional_maps = np.zeros(12*inp.nside**2, dtype=np.float32)
