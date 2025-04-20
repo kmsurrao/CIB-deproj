@@ -50,7 +50,7 @@ def setup_pyilc(inp, env, beta, suppress_printing=False, inflated=False, standar
     pyilc_input_params['taper_width'] = 0
     
     pyilc_input_params['N_freqs'] = len(inp.frequencies)
-    if inp.cib_decorr:
+    if not inp.delta_passbands:
         pyilc_input_params['bandpass_type'] = 'ActualBandpasses'
     else:
         pyilc_input_params['bandpass_type'] = 'DeltaBandpasses' 
@@ -130,16 +130,14 @@ def get_all_ymaps(inp, beta):
     '''
     y_recon_file = f"{inp.output_dir}/pyilc_outputs/beta_{beta:.3f}_uninflated/needletILCmap_component_tSZ_deproject_CIB.fits"
     if not os.path.isfile(y_recon_file):
-        delta_bandpasses = False if inp.cib_decorr else True
-        tsz_sed = tsz_spectral_response(inp.frequencies, delta_bandpasses=delta_bandpasses, inp=inp)
-        cib_sed = cib_spectral_response(inp.frequencies, delta_bandpasses=delta_bandpasses, inp=inp, beta=beta)
+        tsz_sed = tsz_spectral_response(inp.frequencies, delta_bandpasses=inp.delta_passbands, inp=inp)
+        cib_sed = cib_spectral_response(inp.frequencies, delta_bandpasses=inp.delta_passbands, inp=inp, beta=beta)
         HILC_map(inp, beta, tsz_sed, contam_sed=cib_sed, inflated=False)
     y_recon_infl_file = f"{inp.output_dir}/pyilc_outputs/beta_{beta:.3f}_inflated/needletILCmap_component_tSZ_deproject_CIB.fits"
     if not os.path.isfile(y_recon_infl_file):
         get_realistic_infl_maps(inp, beta)
-        delta_bandpasses = False if inp.cib_decorr else True
-        tsz_sed = tsz_spectral_response(inp.frequencies, delta_bandpasses=delta_bandpasses, inp=inp)
-        cib_sed = cib_spectral_response(inp.frequencies, delta_bandpasses=delta_bandpasses, inp=inp, beta=beta)
+        tsz_sed = tsz_spectral_response(inp.frequencies, delta_bandpasses=inp.delta_passbands, inp=inp)
+        cib_sed = cib_spectral_response(inp.frequencies, delta_bandpasses=inp.delta_passbands, inp=inp, beta=beta)
         h_vec = inp.alpha*np.ones_like(inp.frequencies, dtype=np.float32)
         h_vec[-1] = -inp.alpha*sum(tsz_sed[:len(tsz_sed)]**2)/(tsz_sed[-1]**2)
         contam_sed = cib_sed*(1+h_vec)

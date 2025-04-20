@@ -16,7 +16,7 @@ ells_per_bin: 200
 # list of integer frequencies (GHz) to use in harmonic ILC calculation
 # These must be a subset of the Planck HFI frequencies (100, 143, 217, 353, 545), 
 # listed in increasing order
-frequencies: [100, 143, 217, 353, 545]
+frequencies: [143, 217, 353, 545]
 
 # Components to include in the frequency maps. At minimum, this list must include
 # 'tSZ' and 'CIB'. Other options are 'CMB' and 'kSZ'.
@@ -29,7 +29,7 @@ cib_decorr: True
 
 # If true, assumes simulations use delta passbands. If False, assumes Planck passbands
 # This should be set to True if cib_decorr is False
-delta_passbands: False
+delta_passbands: True
 
 # values of beta to test. If not provided, must provide beta_range and num_beta_vals
 beta_arr: [
@@ -78,45 +78,30 @@ noise_fraction: 1.0
 beam_fraction: 1.0
 
 # directory containing agora CIB maps at each frequency in frequencies
-# on NERSC: /global/cfs/cdirs/act/data/agora_sims/cib/planck/len/uk
 # CIB maps are assumed to be in units of uK
 # filenames within directory are assumed to be of form mdpl2_len_mag_cibmap_planck_{freq}_uk.fits
-cib_map_dir: '/scratch/09334/ksurrao/agora_planck/cib/nside_2048'
+cib_map_dir: '/scratch/09334/ksurrao/websky/cib'
 
 # file for agora Compton-y map
-# on NERSC: /global/cfs/cdirs/act/data/agora_sims/tsz/len/mdpl2_ltszNG_bahamas80_rot_sum_4_176_bnd_unb_1.0e+12_1.0e+18_v103021_lmax24000_nside8192_interp1.0_method1_1_lensed_map.fits
-tsz_map_file: '/scratch/09334/ksurrao/agora_planck/tsz_2048.fits'
+tsz_map_file: '/scratch/09334/ksurrao/websky/tsz_1024.fits'
 
 # file for agora kSZ file, only needs to be provided if 'kSZ' is in the list of components
-# on NERSC: /global/cfs/cdirs/act/data/agora_sims/ksz/mdpl2_lkszNG_bahamas80_rot_sum_4_176_bnd_unb_1.0e+12_1.0e+18_v103021_lmax24000_nside8192_interp1.0_method1_1_lensed_map.fits
 # assumed to be in units of uK
-ksz_map_file: '/scratch/09334/ksurrao/agora_planck/ksz_2048.fits'
+ksz_map_file: '/scratch/09334/ksurrao/websky/ksz_1024.fits'
 
 # file for agora CMB file, only needs to be provided if 'CMB' is in the list of components
-# on NERSC: /global/cfs/cdirs/act/data/agora_sims/outputs/act/NEW_02Apr2024/agora_act_90ghz_lcmbNG_uk.fits
 # assumed to be in units of uK
-cmb_map_file: '/scratch/09334/ksurrao/agora_planck/cmb_2048.fits'
-
-# directory containing halo files from rot 1 to 30
-# can be downloaded from https://yomori.github.io/agora/index.html
-# must either provide halo_files_dir or a single halo catalog in halo_catalog
-halo_files_dir: '/scratch/09334/ksurrao/halo_files'
-
-# file containing single halo catalog
-# must either provide halo_catalog or a directory of halo files in halo_files_dir
-# if this input is provided, halo_files_dir will be ignored
-#halo_catalog: '/scratch/09334/ksurrao/halo_files/haloslc_agora_zsel_0.3_to_0.8_Msel_5e12_to_5e14_rot120.h5'
-halo_catalog: '/scratch/09334/ksurrao/halo_files/haloslc_agora_zsel_0.8_to_1.8_Msel_1e12_to_1e15_rot120.h5'
+cmb_map_file: '/scratch/09334/ksurrao/websky/cmb_1024.fits'
 
 # file containing halo map
 # if provided, this overrides both halo_catalog and halo_files_dir
-# halo_map:
+halo_map: '/scratch/09334/ksurrao/websky/halo_map_zsel_0p8_1p8_Mmin_1e12.fits'
 
 # path to pyilc repository
 pyilc_path: '/work2/09334/ksurrao/stampede3/Github/pyilc'
 
 # directory in which to save outputs
-output_dir: '/scratch/09334/ksurrao/cib_deproj_040125/planck1p0_highz_decorr_alpha1_bin200'
+output_dir: '/scratch/09334/ksurrao/cib_deproj_040125/websky_planck1p0_highz_decorr_alpha1_bin200'
 
 # If debug is True, there will be more intermediate printing
 debug: False

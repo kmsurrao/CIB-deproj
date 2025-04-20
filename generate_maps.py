@@ -89,8 +89,7 @@ def get_freq_maps(inp, no_cib=False):
 
     np.random.seed(0)
 
-    delta_bandpasses = True if not inp.cib_decorr else False
-    tsz_response_vec = tsz_spectral_response(inp.frequencies, delta_bandpasses = delta_bandpasses, inp=inp)
+    tsz_response_vec = tsz_spectral_response(inp.frequencies, delta_bandpasses = inp.delta_passbands, inp=inp)
     ymap = hp.read_map(inp.tsz_map_file)
     ymap = hp.ud_grade(ymap, inp.nside) #unitless
     cib_map_143 = 10**(-6)*hp.ud_grade(hp.read_map(f'{inp.cib_map_dir}/mdpl2_len_mag_cibmap_planck_143_uk.fits'), inp.nside) #units of K
@@ -140,8 +139,7 @@ def get_realistic_infl_maps(inp, beta):
     None (writes frequency maps to output_dir)
     '''
     ymap = hp.read_map(f"{inp.output_dir}/pyilc_outputs/beta_{beta:.3f}_uninflated/needletILCmap_component_tSZ_deproject_CIB.fits")
-    delta_bandpasses = True if not inp.cib_decorr else False
-    tsz_sed_vec = tsz_spectral_response(inp.frequencies, delta_bandpasses = delta_bandpasses, inp=inp)
+    tsz_sed_vec = tsz_spectral_response(inp.frequencies, delta_bandpasses = inp.delta_passbands, inp=inp)
     h_vec = [inp.alpha]*len(inp.frequencies)
     h_vec[-1] = -inp.alpha*sum(tsz_sed_vec[:len(tsz_sed_vec)]**2)/(tsz_sed_vec[-1]**2)
     for i, freq in enumerate(inp.frequencies):

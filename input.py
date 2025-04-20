@@ -96,13 +96,21 @@ class Info(object):
             assert type(self.cmb_map_file) is str, "TypeError: cmb_map_file must be str"
             assert os.path.isfile(self.cmb_map_file), f"{self.cmb_map_file} does not exist"
         assert 'halo_catalog' in p or 'halo_files_dir' in p, "Either halo_catalog or halo_files_dir must be defined"
-        if 'halo_catalog' in p: #check for halo_catalog before halo_files_dir since using a single halo catalog is faster
+        if 'halo_map' in p:
+            self.halo_map = p['halo_map']
+            assert type(self.halo_map) is str, "TypeError: halo_map must be str"
+            assert os.path.isfile(self.halo_map), "halo_map does not exist"
+            self.halo_files_dir = None
+            self.halo_catalog = None
+        elif 'halo_catalog' in p: #check for halo_catalog before halo_files_dir since using a single halo catalog is faster
             self.halo_catalog = p['halo_catalog']
             assert type(self.halo_catalog) is str, "TypeError: halo_catalog must be str"
             assert os.path.isfile(self.halo_catalog), "halo_catalog does not exist"
             self.halo_files_dir = None
+            self.halo_map = None
         elif 'halo_files_dir' in p:
             self.halo_catalog = None
+            self.halo_map = None
             self.halo_files_dir = p['halo_files_dir']
             assert type(self.halo_files_dir) is str, "TypeError: halo_files_dir must be str"
             assert os.path.isdir(self.halo_files_dir), "halo_files_dir does not exist"
@@ -118,6 +126,9 @@ class Info(object):
             "self.frequencies must be subset of {30,44,70,100,143,217,353,545}"
 
         self.cib_decorr = p['cib_decorr']
+        self.delta_passbands = p['delta_passbands']
+        if not self.cib_decorr:
+            assert self.delta_passbands, "Must use delta passbands if using sims with no CIB decorrelation."
 
         self.output_dir = p['output_dir']
         assert type(self.output_dir) is str, "TypeError: output_dir must be str"

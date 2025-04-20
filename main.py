@@ -37,7 +37,9 @@ def main():
     setup_output_dir(inp)
     
     # get map of halos and maps at each frequency (both with and without inflated CIB)
-    if inp.halo_catalog is not None:                                                  
+    if inp.halo_map is not None:
+        h = hp.ud_grade(hp.read_map(inp.halo_map), inp.nside)
+    elif inp.halo_catalog is not None:                                                  
         h = halofile2map(inp)
     else:
         h = halodir2map(inp)
@@ -45,9 +47,8 @@ def main():
     print('Getting maps at different frequencies...', flush=True)
     get_freq_maps(inp, no_cib=False)
 
-    # define some variables
-    delta_bandpasses = False if inp.cib_decorr else True
-    signal_sed = tsz_spectral_response(inp.frequencies, delta_bandpasses=delta_bandpasses, inp=inp)
+    # define SED of tSZ
+    signal_sed = tsz_spectral_response(inp.frequencies, delta_bandpasses=inp.delta_passbands, inp=inp)
 
 
     # Build standard ILC y-map (from maps with no CIB)
@@ -148,7 +149,7 @@ def main():
         bin_inds = bin_number.astype(int) - 1
         beta_vs_ell = np.zeros_like(ells, dtype=np.float32)
         beta_vs_ell[inp.ellmin:] = mean_betas[bin_inds] # below ellmin not used
-        contam_sed = cib_spectral_response(inp.frequencies, delta_bandpasses=delta_bandpasses, \
+        contam_sed = cib_spectral_response(inp.frequencies, delta_bandpasses=inp.delta_passbands, \
                                            inp=inp, beta=beta_vs_ell) # shape (Nfreqs, ellmax+1)
         fname = f"{inp.output_dir}/pyilc_outputs/final/needletILCmap_component_tSZ_deproject_CIB_{pipeline_str}.fits"
         if not os.path.isfile(fname):
