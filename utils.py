@@ -365,61 +365,84 @@ def estimate_covariance(T, h, R, lmax):
     Parameters
     ----------
     T : ndarray, shape (N_freq, N_pix)
-        Original frequency maps T_ν, flattened over pixels.
+        Original frequency maps T_ν.
     h : ndarray, shape (N_freq,)
-        Current deprojection weights h_ν.
+        Deprojection weights h_ν.
     R : ndarray, shape (N_freq, N_pix)
-        Residual maps R_ν^β = T_ν - f_ν y^β, same shape as T.
+        Residual maps R_ν^β = T_ν - f_ν y^β.
     lmax : int
         Maximum multipole to compute C_ℓ via healpy.anafast.
 
     Returns
     -------
     C : ndarray, shape (N_freq, N_freq)
-        Estimated covariance matrix C_{νμ} = ∑_ℓ (2ℓ+1) C_ℓ^{νμ}.
+        Covariance matrix C_{νμ} = ∑_ℓ (2ℓ+1) C_ℓ^{νμ}.
     """
     N_freq, N_pix = T.shape
-    # Build modified maps T' = T + h[:,None] * R
     T_prime = T + h[:, None] * R
-
-    # Initialize covariance matrix
+    # compute alms once per freq
+    alms = [hp.map2alm(T_prime[i], lmax=lmax) for i in range(N_freq)]
     C = np.zeros((N_freq, N_freq))
-    # Compute cross-spectra for each pair
     for i in range(N_freq):
         for j in range(i, N_freq):
-            # Compute cross-power spectrum C_ℓ^{i,j}
-            cl_ij = hp.anafast(T_prime[i], T_prime[j], lmax=lmax)
+            cl_ij = hp.alm2cl(alms[i], alms[j], lmax_out=lmax)
             ells = np.arange(len(cl_ij))
-            # Sum weighted by (2ℓ+1)
             cov_ij = np.sum((2*ells + 1) * cl_ij)
-            C[i, j] = cov_ij
-            C[j, i] = cov_ij  # symmetry
+            C[i, j] = C[j, i] = cov_ij
     return C
 
 
-def optimize_h(inp, max_iter=10, tol=1e-4):
+def compute_inflation_vector(C, f):
     """
-    Iteratively solve for the optimal h_ν that minimizes the two-constraint ILC map variance,
-    using harmonic-space covariance estimated from angular power spectra.
+    Compute the single inflation mode v ⟂ f:
+      - Project out f from C: C_perp = P_f C P_f
+      - Leading eigenvector of C_perp (normalized)
 
     Parameters
     ----------
-    inp : object
-        Input spec needed if delta_bandpasses=False for bandpass files.
-    max_iter : int, optional
-        Maximum number of iterations (default 10).
-    tol : float, optional
-        Convergence tolerance on ||h_new - h|| (default 1e-4).
+    C : ndarray, shape (N_freq, N_freq)
+        Covariance matrix.
+    f : ndarray, shape (N_freq,)
+        tSZ SED.
 
     Returns
     -------
-    h : ndarray, shape (N_freq,)
-        Self-consistent deprojection weights h_ν.
+    v : ndarray, shape (N_freq,)
+        Leading contaminant mode orthogonal to f (||v||=1).
     """
-    # Precompute SEDs for tSZ and CIB at given freqs
-    g = cib_spectral_response(inp.frequencies, inp.delta_passbands, inp, inp.beta_fid)  # shape (N_freq,)
-    f = tsz_spectral_response(inp.frequencies, inp.delta_passbands, inp)       # shape (N_freq,)
+    ff = np.dot(f, f)
+    P = np.eye(len(f)) - np.outer(f, f) / ff
+    C_perp = P @ C @ P
+    eigvals, eigvecs = np.linalg.eigh(C_perp)
+    v = eigvecs[:, -1]
+    return v / np.linalg.norm(v)
 
+
+def optimize_alpha_auto(inp, initial_alpha_range=1.0, alpha_eps=1e-3,
+                        coarse_nalpha=100, fine_nalpha=300, refine_frac=0.2,
+                        max_expand=4, max_iter=5, tol=1e-4):
+    """
+    Iteratively solve for h_ν(α)=α v_ν/g_ν, enforcing α ≠ 0, with automatic alpha_range.
+
+    Parameters
+    ----------
+    inp: object
+    initial_alpha_range : float, Initial symmetric scan range for α in coarse search (default 1.0).
+    alpha_eps : float, Minimum |α| to allow, excluding |α| < alpha_eps (default 1e-3).
+    coarse_nalpha: int, Number of α points in the coarse scan (default 100).
+    fine_nalpha: int, Number of α points in the refined scan (default 300).
+    refine_frac : float, Fractional window width around coarse best for refinement (default 0.2).
+    max_expand : int, Maximum number of times to double alpha_range if best α lies near edges (default 4).
+    max_iter : int, Maximum number of outer iterations on h (default 5).
+    tol : float, Convergence tolerance on ||h_new - h|| (default 1e-4).
+
+    Returns
+    -------
+    alpha : float
+    h : ndarray, shape (N_freq,)
+    """
+
+    # Get T and R (frequency and residual maps for fiducial beta)
     T = np.zeros((len(inp.frequencies), 12*inp.nside**2), dtype=np.float32) # frequency maps
     R = np.zeros((len(inp.frequencies), 12*inp.nside**2), dtype=np.float32) # residual maps
     ymap = hp.read_map(f"{inp.output_dir}/pyilc_outputs/beta_{inp.beta_fid:.3f}_uninflated/needletILCmap_component_tSZ_deproject_CIB.fits")
@@ -427,39 +450,77 @@ def optimize_h(inp, max_iter=10, tol=1e-4):
         T[i] = hp.read_map(f'{inp.output_dir}/maps/uninflated_{freq}.fits')
         R[i] = T[i] - f[i]*ymap
 
-    # Initialize h to zero
-    h = np.zeros_like(inp.frequencies, dtype=float)
+    freqs = inp.frequencies
+    lmax = inp.ellmax
+    beta_fid = inp.beta_fid
+    delta_bandpasses = inp.delta_passbands
+   
+    g = cib_spectral_response(freqs, delta_bandpasses, inp, beta_fid)
+    f = tsz_spectral_response(freqs, delta_bandpasses, inp)
 
-    for n in range(max_iter):
-        # 1) Estimate covariance C(h) in ℓ-space
-        C = estimate_covariance(T, h, R, inp.ellmax)
+    h = np.zeros_like(freqs)
+    alpha = 0.0
+    alpha_range = initial_alpha_range
+
+    for _ in range(max_iter):
+        C = estimate_covariance(T, h, R, lmax)
         Cinv = np.linalg.inv(C)
+        v = compute_inflation_vector(C, f)
 
-        # 2) Matched-filter direction: maximize f^T C^-1 d
-        x = Cinv.dot(f)  # shape (N_freq,)
+        # Precompute dot products
+        F = f @ (Cinv @ f)
+        A0 = f @ (Cinv @ g)
+        B0 = f @ (Cinv @ v)
+        G0 = g @ (Cinv @ g)
+        H0 = g @ (Cinv @ v)
+        K0 = v @ (Cinv @ v)
 
-        # 3) Build constraint vector and helper scalars
-        a = (f**2) / g    # shape (N_freq,)
-        S = np.dot(f, f)  # scalar = sum f_ν^2
-        T_scalar = np.dot(a, x)
-        W = a.dot(C.dot(a))
+        # Adaptive alpha_range expansion
+        ar = alpha_range
+        for _ in range(max_expand):
+            alphas = np.linspace(-ar, ar, coarse_nalpha)
+            num = A0 + alphas * B0
+            den = G0 + 2 * alphas * H0 + alphas**2 * K0
+            invvar = F - (num**2) / den
+            idx = np.nanargmax(invvar)
+            a_best = alphas[idx]
+            if abs(a_best) > 0.9 * ar:
+                ar *= 2
+            else:
+                break
+        alpha_range = ar
 
-        # 4) Solve Lagrange multiplier: λ = (T - S) / W
-        lam = (T_scalar - S) / W
+        # Exclude near-zero zone
+        intervals = [(-ar, -alpha_eps), (alpha_eps, ar)]
 
-        # 5) Form optimal template d = x - λ C a
-        d = x - lam * C.dot(a)
+        best_invvar = -np.inf
+        best_alpha = alpha
 
-        # 6) Update h: (d / g) - 1
-        h_new = d / g - 1
+        # Coarse+refine scan
+        for lo, hi in intervals:
+            alphas = np.linspace(lo, hi, coarse_nalpha)
+            num = A0 + alphas * B0
+            den = G0 + 2 * alphas * H0 + alphas**2 * K0
+            invvar = F - (num**2) / den
+            idx = np.nanargmax(invvar)
+            a_coarse = alphas[idx]
+            # refine
+            delta = refine_frac * (hi - lo)
+            lo2, hi2 = a_coarse - delta, a_coarse + delta
+            alphas_f = np.linspace(lo2, hi2, fine_nalpha)
+            numf = A0 + alphas_f * B0
+            denf = G0 + 2 * alphas_f * H0 + alphas_f**2 * K0
+            invvarf = F - (numf**2) / denf
+            idxf = np.nanargmax(invvarf)
+            a_fine = alphas_f[idxf]
+            if invvarf[idxf] > best_invvar:
+                best_invvar = invvarf[idxf]
+                best_alpha = a_fine
 
-        # Check convergence
+        h_new = best_alpha * v / g
         if np.linalg.norm(h_new - h) < tol:
-            h = h_new
+            alpha, h = best_alpha, h_new
             break
-        h = h_new
-        print('iteration: ', n, flush=True)
-        print('h: ', h, flush=True)
+        alpha, h = best_alpha, h_new
 
-    print('h: ', h, flush=True)
-    return h
+    return alpha, h

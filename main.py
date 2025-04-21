@@ -9,7 +9,7 @@ import healpy as hp
 from input import Info
 from halo2map import halodir2map, halofile2map
 from cross_corr import harmonic_space_cov, cov, compare_chi2_star
-from get_y_map import get_all_ymaps, get_all_ymaps_star, setup_pyilc
+from get_y_map import get_all_ymaps_star, setup_pyilc
 from generate_maps import get_freq_maps
 from harmonic_ilc import HILC_map
 from beta_per_bin import get_all_1sigma_beta, predict_with_uncertainty
@@ -62,19 +62,26 @@ def main():
 
     # Build ILC y-map deprojecting fiducial beta
     print('Building y-map deprojecting fiducial beta...', flush=True)
-    get_all_ymaps(inp, inp.beta_fid)
+    y_recon_file = f"{inp.output_dir}/pyilc_outputs/beta_{inp.beta_fid:.3f}_uninflated/needletILCmap_component_tSZ_deproject_CIB.fits"
+    if not os.path.isfile(y_recon_file):
+        tsz_sed = tsz_spectral_response(inp.frequencies, delta_bandpasses=inp.delta_passbands, inp=inp)
+        cib_sed = cib_spectral_response(inp.frequencies, delta_bandpasses=inp.delta_passbands, inp=inp, beta=inp.beta_fid)
+        HILC_map(inp, inp.beta_fid, tsz_sed, contam_sed=cib_sed, inflated=False)
 
     # Get best h_nu
     print('Getting best h_nu...', flush=True)
-    inp.h_vec = optimize_h(inp, max_iter=10, tol=1e-4)
+    alpha, inp.h_vec = optimize_alpha_auto(inp)
 
     # Build ILC y-maps (deprojecting beta)
     print('Building all other y-maps...', flush=True)
     pool = mp.Pool(inp.num_parallel)
     inputs = [(inp, beta) for beta in inp.beta_arr]
+    if inp.beta_fid not in inputs:
+        inputs.append((inp, inp.beta_fid))
     _ = list(tqdm.tqdm(pool.imap(get_all_ymaps_star, inputs), total=len(inputs)))
     pool.close()
     
+
     # Compute covariance matrix
     print(f'\nComputing covariance matrix using beta={inp.beta_fid:0.3f}...', flush=True)
     if os.path.isfile(f'{inp.output_dir}/correlation_plots/cov_hytrue.p'):
