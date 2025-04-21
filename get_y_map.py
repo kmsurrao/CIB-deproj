@@ -138,9 +138,9 @@ def get_all_ymaps(inp, beta):
         get_realistic_infl_maps(inp, beta)
         tsz_sed = tsz_spectral_response(inp.frequencies, delta_bandpasses=inp.delta_passbands, inp=inp)
         cib_sed = cib_spectral_response(inp.frequencies, delta_bandpasses=inp.delta_passbands, inp=inp, beta=beta)
-        h_vec = inp.alpha*np.ones_like(inp.frequencies, dtype=np.float32)
-        h_vec[-1] = -inp.alpha*sum(tsz_sed[:len(tsz_sed)]**2)/(tsz_sed[-1]**2)
-        contam_sed = cib_sed*(1+h_vec)
+        # h_vec = inp.alpha*np.ones_like(inp.frequencies, dtype=np.float32)
+        # h_vec[-1] = -inp.alpha*sum(tsz_sed[:len(tsz_sed)]**2)/(tsz_sed[-1]**2)
+        contam_sed = cib_sed*(1+inp.h_vec)
         HILC_map(inp, beta, tsz_sed, contam_sed = contam_sed, inflated=True)
     return 1
 
@@ -171,7 +171,7 @@ if __name__ == '__main__':
 
     # main input file containing most specifications 
     parser = argparse.ArgumentParser(description="Optimal beta value for CIB deprojection.")
-    parser.add_argument("--config", default="example.yaml")
+    parser.add_argument("--config", default="example_websky.yaml")
     args = parser.parse_args()
     input_file = args.config
 
@@ -183,14 +183,16 @@ if __name__ == '__main__':
     setup_output_dir(inp, env)
     
     # get map of halos and maps at each frequency (both with and without inflated CIB)
-    if inp.halo_catalog is not None:                                                  
-        h, ra_halos, dec_halos = halofile2map(inp)
+    if inp.halo_map is not None:
+        h = hp.ud_grade(hp.read_map(inp.halo_map), inp.nside)
+    elif inp.halo_catalog is not None:                                                  
+        h = halofile2map(inp)
     else:
-        h, ra_halos, dec_halos = halodir2map(inp)
+        h = halodir2map(inp)
     print('got ra and dec of halos', flush=True)
     print('Getting maps at different frequencies...', flush=True)
     get_freq_maps(inp, diff_noise=False, no_cib=False)
 
     # test pyilc
-    beta = 1.600
+    beta = 0.65
     setup_pyilc(inp, env, beta, suppress_printing=False, inflated=False, standard_ilc=False, no_cib=False)

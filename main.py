@@ -9,10 +9,10 @@ import healpy as hp
 from input import Info
 from halo2map import halodir2map, halofile2map
 from cross_corr import harmonic_space_cov, cov, compare_chi2_star
-from get_y_map import get_all_ymaps_star, setup_pyilc
+from get_y_map import get_all_ymaps, get_all_ymaps_star, setup_pyilc
 from generate_maps import get_freq_maps
 from harmonic_ilc import HILC_map
-from beta_per_bin import get_all_1sigma_beta, predict_with_uncertainty, model
+from beta_per_bin import get_all_1sigma_beta, predict_with_uncertainty
 from utils import *
 plt.rcParams.update({
      'font.family': 'serif',
@@ -60,17 +60,21 @@ def main():
     else:
         yopt = hp.read_map(standard_ILC_file)
 
+    # Build ILC y-map deprojecting fiducial beta
+    print('Building y-map deprojecting fiducial beta...', flush=True)
+    get_all_ymaps(inp, inp.beta_fid)
+
+    # Get best h_nu
+    print('Getting best h_nu...', flush=True)
+    inp.h_vec = optimize_h(inp, max_iter=10, tol=1e-4)
 
     # Build ILC y-maps (deprojecting beta)
-    print('Building y-maps...', flush=True)
+    print('Building all other y-maps...', flush=True)
     pool = mp.Pool(inp.num_parallel)
     inputs = [(inp, beta) for beta in inp.beta_arr]
-    if inp.beta_fid not in inp.beta_arr:
-        inputs.append((inp, inp.beta_fid))
     _ = list(tqdm.tqdm(pool.imap(get_all_ymaps_star, inputs), total=len(inputs)))
     pool.close()
     
-
     # Compute covariance matrix
     print(f'\nComputing covariance matrix using beta={inp.beta_fid:0.3f}...', flush=True)
     if os.path.isfile(f'{inp.output_dir}/correlation_plots/cov_hytrue.p'):

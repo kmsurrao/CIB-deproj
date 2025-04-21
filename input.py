@@ -95,7 +95,7 @@ class Info(object):
             self.cmb_map_file = p['cmb_map_file']
             assert type(self.cmb_map_file) is str, "TypeError: cmb_map_file must be str"
             assert os.path.isfile(self.cmb_map_file), f"{self.cmb_map_file} does not exist"
-        assert 'halo_catalog' in p or 'halo_files_dir' in p, "Either halo_catalog or halo_files_dir must be defined"
+        assert 'halo_map' in p or 'halo_catalog' in p or 'halo_files_dir' in p, "Either halo_map, halo_catalog, or halo_files_dir must be defined"
         if 'halo_map' in p:
             self.halo_map = p['halo_map']
             assert type(self.halo_map) is str, "TypeError: halo_map must be str"

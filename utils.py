@@ -1,4 +1,5 @@
 import numpy as np
+import healpy as hp
 import os
 import yaml
 from scipy import stats
@@ -355,3 +356,110 @@ def multifrequency_cov(inp, S, N):
     covar /= Nmodes
     return covar
 
+
+def estimate_covariance(T, h, R, lmax):
+    """
+    Estimate the frequency-frequency covariance of the modified maps T' = T + h*R 
+    by summing (2ℓ+1) C_ℓ over multipoles in harmonic space.
+
+    Parameters
+    ----------
+    T : ndarray, shape (N_freq, N_pix)
+        Original frequency maps T_ν, flattened over pixels.
+    h : ndarray, shape (N_freq,)
+        Current deprojection weights h_ν.
+    R : ndarray, shape (N_freq, N_pix)
+        Residual maps R_ν^β = T_ν - f_ν y^β, same shape as T.
+    lmax : int
+        Maximum multipole to compute C_ℓ via healpy.anafast.
+
+    Returns
+    -------
+    C : ndarray, shape (N_freq, N_freq)
+        Estimated covariance matrix C_{νμ} = ∑_ℓ (2ℓ+1) C_ℓ^{νμ}.
+    """
+    N_freq, N_pix = T.shape
+    # Build modified maps T' = T + h[:,None] * R
+    T_prime = T + h[:, None] * R
+
+    # Initialize covariance matrix
+    C = np.zeros((N_freq, N_freq))
+    # Compute cross-spectra for each pair
+    for i in range(N_freq):
+        for j in range(i, N_freq):
+            # Compute cross-power spectrum C_ℓ^{i,j}
+            cl_ij = hp.anafast(T_prime[i], T_prime[j], lmax=lmax)
+            ells = np.arange(len(cl_ij))
+            # Sum weighted by (2ℓ+1)
+            cov_ij = np.sum((2*ells + 1) * cl_ij)
+            C[i, j] = cov_ij
+            C[j, i] = cov_ij  # symmetry
+    return C
+
+
+def optimize_h(inp, max_iter=10, tol=1e-4):
+    """
+    Iteratively solve for the optimal h_ν that minimizes the two-constraint ILC map variance,
+    using harmonic-space covariance estimated from angular power spectra.
+
+    Parameters
+    ----------
+    inp : object
+        Input spec needed if delta_bandpasses=False for bandpass files.
+    max_iter : int, optional
+        Maximum number of iterations (default 10).
+    tol : float, optional
+        Convergence tolerance on ||h_new - h|| (default 1e-4).
+
+    Returns
+    -------
+    h : ndarray, shape (N_freq,)
+        Self-consistent deprojection weights h_ν.
+    """
+    # Precompute SEDs for tSZ and CIB at given freqs
+    g = cib_spectral_response(inp.frequencies, inp.delta_passbands, inp, inp.beta_fid)  # shape (N_freq,)
+    f = tsz_spectral_response(inp.frequencies, inp.delta_passbands, inp)       # shape (N_freq,)
+
+    T = np.zeros((len(inp.frequencies), 12*inp.nside**2), dtype=np.float32) # frequency maps
+    R = np.zeros((len(inp.frequencies), 12*inp.nside**2), dtype=np.float32) # residual maps
+    ymap = hp.read_map(f"{inp.output_dir}/pyilc_outputs/beta_{inp.beta_fid:.3f}_uninflated/needletILCmap_component_tSZ_deproject_CIB.fits")
+    for i, freq in enumerate(inp.frequencies):
+        T[i] = hp.read_map(f'{inp.output_dir}/maps/uninflated_{freq}.fits')
+        R[i] = T[i] - f[i]*ymap
+
+    # Initialize h to zero
+    h = np.zeros_like(inp.frequencies, dtype=float)
+
+    for n in range(max_iter):
+        # 1) Estimate covariance C(h) in ℓ-space
+        C = estimate_covariance(T, h, R, inp.ellmax)
+        Cinv = np.linalg.inv(C)
+
+        # 2) Matched-filter direction: maximize f^T C^-1 d
+        x = Cinv.dot(f)  # shape (N_freq,)
+
+        # 3) Build constraint vector and helper scalars
+        a = (f**2) / g    # shape (N_freq,)
+        S = np.dot(f, f)  # scalar = sum f_ν^2
+        T_scalar = np.dot(a, x)
+        W = a.dot(C.dot(a))
+
+        # 4) Solve Lagrange multiplier: λ = (T - S) / W
+        lam = (T_scalar - S) / W
+
+        # 5) Form optimal template d = x - λ C a
+        d = x - lam * C.dot(a)
+
+        # 6) Update h: (d / g) - 1
+        h_new = d / g - 1
+
+        # Check convergence
+        if np.linalg.norm(h_new - h) < tol:
+            h = h_new
+            break
+        h = h_new
+        print('iteration: ', n, flush=True)
+        print('h: ', h, flush=True)
+
+    print('h: ', h, flush=True)
+    return h
