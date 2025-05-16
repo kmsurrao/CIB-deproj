@@ -331,32 +331,6 @@ def binned(inp, spectrum):
     return binned_spectrum
 
 
-def multifrequency_cov(inp, S, N):
-    '''
-    Computes multifrequency Gaussian covariance in harmonic space
-
-    ARGUMENTS
-    ---------
-    inp: Info object containing input parameter specifications
-    S: 3D numpy array of shape (Nfreqs, Nfreqs, ellmax+1) containing power spectrum of signal
-    N: 3D numpy array of shape (Nfreqs, Nfreqs, ellmax+1) containing power spectrum of noise
-        (only nonzero for frequency-frequency auto-spectra)
-
-    RETURNS
-    -------
-    covar: 5D numpy array of shape (Nfreqs, Nfreqs, Nfreqs, Nfreqs, ellmax+1)
-        containing Gaussian covariance matrix
-    '''
-    ells = np.arange(inp.ellmin, inp.ellmax+1)
-    Nmodes = 1/(2*ells+1)
-    covar = np.einsum('l,ikl,jml->ijkml', Nmodes, S, S) + np.einsum('l,iml,jkl->ijkml', Nmodes, S, S) \
-          + np.einsum('l,ikl,jml->ijkml', Nmodes, S, N) + np.einsum('l,jml,ikl->ijkml', Nmodes, S, N) \
-          + np.einsum('l,iml,jkl->ijkml', Nmodes, S, N) + np.einsum('l,jkl,iml->ijkml', Nmodes, S, N) \
-          + np.einsum('l,ikl,jml->ijkml', Nmodes, N, N) + np.einsum('l,jkl,iml->ijkml', Nmodes, N, N)
-    covar /= Nmodes
-    return covar
-
-
 def estimate_covariance(T, h, R, lmax):
     """
     Estimate the frequency-frequency covariance of the modified maps T' = T + h*R 
@@ -392,135 +366,145 @@ def estimate_covariance(T, h, R, lmax):
     return C
 
 
-def compute_inflation_vector(C, f):
+def compute_inflation_vector(Cinv, f, g):
     """
-    Compute the single inflation mode v ⟂ f:
-      - Project out f from C: C_perp = P_f C P_f
-      - Leading eigenvector of C_perp (normalized)
+    Leading contaminant mode v orthogonal to a = f^2/g.
 
     Parameters
     ----------
-    C : ndarray, shape (N_freq, N_freq)
-        Covariance matrix.
+    Cinv : ndarray, shape (N_freq, N_freq)
+        Inverse Covariance matrix.
     f : ndarray, shape (N_freq,)
         tSZ SED.
+    g : ndarray, shape (N_freq,)
+        CIB SED template.
 
     Returns
     -------
     v : ndarray, shape (N_freq,)
-        Leading contaminant mode orthogonal to f (||v||=1).
+        Top eigenvector of P_a Cinv P_a, normalized, with a·v=0.
     """
-    ff = np.dot(f, f)
-    P = np.eye(len(f)) - np.outer(f, f) / ff
-    C_perp = P @ C @ P
+    # build the a-vector enforcing sum f^2 h = 0 constraint
+    a = f**2 / g            # shape (N_freq,)
+    a2 = np.dot(a, a)       # a·a
+    P = np.eye(len(a)) - np.outer(a, a)/a2
+    C_perp = P @ Cinv @ P
     eigvals, eigvecs = np.linalg.eigh(C_perp)
-    v = eigvecs[:, -1]
+    v = eigvecs[:, -1]      # leading mode
     return v / np.linalg.norm(v)
 
 
-def optimize_alpha_auto(inp, initial_alpha_range=1.0, alpha_eps=1e-3,
-                        coarse_nalpha=100, fine_nalpha=300, refine_frac=0.2,
-                        max_expand=4, max_iter=5, tol=1e-4):
+
+
+def optimize_alpha(inp, max_iter=40, tol=1e-3, gamma=0.4, ridge_factor=1e-3):
     """
-    Iteratively solve for h_ν(α)=α v_ν/g_ν, enforcing α ≠ 0, with automatic alpha_range.
+    Iteratively solve for h_ν = α * v_ν / g_ν, with analytic alpha,
+    damping on alpha (instead of h), ridge regularization, and C^{-1}-metric normalization.
+
+    This routine:
+      1. Loads original frequency maps T_ν and residuals R_ν.
+      2. Computes the contaminant direction v via a projected eigenvector of C^{-1}.
+      3. Normalizes v in the C^{-1}-metric and then under-relaxes v to smooth changes.
+      4. Analytically solves for the optimal α (with a small ridge).
+      5. Updates α via under-relaxation and computes h = α * v / g.
+      6. Repeats until h converges.
 
     Parameters
     ----------
-    inp: object
-    initial_alpha_range : float, Initial symmetric scan range for α in coarse search (default 1.0).
-    alpha_eps : float, Minimum |α| to allow, excluding |α| < alpha_eps (default 1e-3).
-    coarse_nalpha: int, Number of α points in the coarse scan (default 100).
-    fine_nalpha: int, Number of α points in the refined scan (default 300).
-    refine_frac : float, Fractional window width around coarse best for refinement (default 0.2).
-    max_expand : int, Maximum number of times to double alpha_range if best α lies near edges (default 4).
-    max_iter : int, Maximum number of outer iterations on h (default 5).
-    tol : float, Convergence tolerance on ||h_new - h|| (default 1e-4).
+    inp : object
+        Input parameters container (should contain frequencies, ellmax, beta_fid, etc.).
+    max_iter : int
+        Maximum number of outer iterations.
+    tol : float
+        Convergence tolerance on ||h_new - h_old||.
+    gamma : float
+        Under-relaxation factor for both v and α (0 < gamma <= 1).
+    ridge_factor : float
+        Fractional ridge added to denominator to avoid numerical cancellation.
 
     Returns
     -------
     alpha : float
-    h : ndarray, shape (N_freq,)
+        Inflation factor α corresponding to final h.
+    h : ndarray
+        Deprojection weights h_ν.
     """
-
-    # Get T and R (frequency and residual maps for fiducial beta)
-    T = np.zeros((len(inp.frequencies), 12*inp.nside**2), dtype=np.float32) # frequency maps
-    R = np.zeros((len(inp.frequencies), 12*inp.nside**2), dtype=np.float32) # residual maps
-    ymap = hp.read_map(f"{inp.output_dir}/pyilc_outputs/beta_{inp.beta_fid:.3f}_uninflated/needletILCmap_component_tSZ_deproject_CIB.fits")
-    for i, freq in enumerate(inp.frequencies):
-        T[i] = hp.read_map(f'{inp.output_dir}/maps/uninflated_{freq}.fits')
-        R[i] = T[i] - f[i]*ymap
-
     freqs = inp.frequencies
     lmax = inp.ellmax
     beta_fid = inp.beta_fid
-    delta_bandpasses = inp.delta_passbands
-   
-    g = cib_spectral_response(freqs, delta_bandpasses, inp, beta_fid)
-    f = tsz_spectral_response(freqs, delta_bandpasses, inp)
+    delta_bp = inp.delta_passbands
 
-    h = np.zeros_like(freqs)
+    # Load and scale g
+    g_orig = cib_spectral_response(freqs, delta_bp, inp, beta_fid)
+    g0 = np.max(np.abs(g_orig))
+    g = g_orig / g0
+
+    # tSZ SED
+    f = tsz_spectral_response(freqs, delta_bp, inp)
+
+    # Load maps and residuals
+    T = np.zeros((len(freqs), 12 * inp.nside**2))
+    R = np.zeros_like(T)
+    ymap = hp.read_map(
+        f"{inp.output_dir}/pyilc_outputs/"
+        f"beta_{beta_fid:.3f}_uninflated/"
+        "needletILCmap_component_tSZ_deproject_CIB.fits"
+    )
+    for i, nu in enumerate(freqs):
+        T[i] = hp.read_map(f"{inp.output_dir}/maps/uninflated_{nu}.fits")
+        R[i] = T[i] - f[i] * ymap
+
+    N = len(freqs)
+    h = np.zeros(N)
     alpha = 0.0
-    alpha_range = initial_alpha_range
+    v_old = None
 
     for _ in range(max_iter):
+        # 1) Covariance and its inverse
         C = estimate_covariance(T, h, R, lmax)
         Cinv = np.linalg.inv(C)
-        v = compute_inflation_vector(C, f)
 
-        # Precompute dot products
-        F = f @ (Cinv @ f)
+        # 2) Direction step: projected eigenvector
+        v_cand = compute_inflation_vector(Cinv, f, g_orig)
+
+        # Normalize v_cand in Cinv-metric: v^T Cinv v = 1
+        norm_v = np.sqrt(v_cand @ (Cinv @ v_cand))
+        if norm_v > 0:
+            v_cand = v_cand / norm_v
+
+        # 3) Under-relaxation on v
+        if v_old is None:
+            v = v_cand
+        else:
+            v = v_old + gamma * (v_cand - v_old)
+            v = v / np.linalg.norm(v)
+        v_old = v
+
+        # 4) Inner products with scaled g
         A0 = f @ (Cinv @ g)
         B0 = f @ (Cinv @ v)
         G0 = g @ (Cinv @ g)
         H0 = g @ (Cinv @ v)
-        K0 = v @ (Cinv @ v)
+        K0 = 1.0  # after Cinv-normalization
 
-        # Adaptive alpha_range expansion
-        ar = alpha_range
-        for _ in range(max_expand):
-            alphas = np.linspace(-ar, ar, coarse_nalpha)
-            num = A0 + alphas * B0
-            den = G0 + 2 * alphas * H0 + alphas**2 * K0
-            invvar = F - (num**2) / den
-            idx = np.nanargmax(invvar)
-            a_best = alphas[idx]
-            if abs(a_best) > 0.9 * ar:
-                ar *= 2
-            else:
-                break
-        alpha_range = ar
+        # 5) Analytic alpha update with ridge
+        num = A0 * H0 - B0 * G0
+        den = B0 * H0 - A0 * K0
+        den += ridge_factor * abs(B0 * H0)
+        alpha_cand = (num / den if abs(den) > 0 else 0.0) * g0
 
-        # Exclude near-zero zone
-        intervals = [(-ar, -alpha_eps), (alpha_eps, ar)]
+        # 6) Under-relaxation on alpha
+        alpha = alpha + gamma * (alpha_cand - alpha)
 
-        best_invvar = -np.inf
-        best_alpha = alpha
+        # 7) Compute h directly from damped alpha
+        h_new = alpha * v / g_orig
 
-        # Coarse+refine scan
-        for lo, hi in intervals:
-            alphas = np.linspace(lo, hi, coarse_nalpha)
-            num = A0 + alphas * B0
-            den = G0 + 2 * alphas * H0 + alphas**2 * K0
-            invvar = F - (num**2) / den
-            idx = np.nanargmax(invvar)
-            a_coarse = alphas[idx]
-            # refine
-            delta = refine_frac * (hi - lo)
-            lo2, hi2 = a_coarse - delta, a_coarse + delta
-            alphas_f = np.linspace(lo2, hi2, fine_nalpha)
-            numf = A0 + alphas_f * B0
-            denf = G0 + 2 * alphas_f * H0 + alphas_f**2 * K0
-            invvarf = F - (numf**2) / denf
-            idxf = np.nanargmax(invvarf)
-            a_fine = alphas_f[idxf]
-            if invvarf[idxf] > best_invvar:
-                best_invvar = invvarf[idxf]
-                best_alpha = a_fine
-
-        h_new = best_alpha * v / g
+        # 8) Convergence check on h
         if np.linalg.norm(h_new - h) < tol:
-            alpha, h = best_alpha, h_new
+            h = h_new
             break
-        alpha, h = best_alpha, h_new
+        h = h_new
 
+    # 9) Recover final alpha consistent with h and v
+    alpha = ((h * g_orig) @ v) / (v @ v) if (v @ v) > 0 else 0.0
     return alpha, h

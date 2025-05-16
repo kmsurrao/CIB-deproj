@@ -70,7 +70,11 @@ def main():
 
     # Get best h_nu
     print('Getting best h_nu...', flush=True)
-    alpha, inp.h_vec = optimize_alpha_auto(inp)
+    if inp.optimize_hnu:
+        alpha, inp.h_vec = optimize_alpha(inp)
+    else:
+        inp.h_vec = [inp.alpha]*len(inp.frequencies)
+        inp.h_vec[-1] = -inp.alpha*sum(tsz_sed[:len(tsz_sed)]**2)/(tsz_sed[-1]**2)
 
     # Build ILC y-maps (deprojecting beta)
     print('Building all other y-maps...', flush=True)
@@ -80,7 +84,6 @@ def main():
         inputs.append((inp, inp.beta_fid))
     _ = list(tqdm.tqdm(pool.imap(get_all_ymaps_star, inputs), total=len(inputs)))
     pool.close()
-    
 
     # Compute covariance matrix
     print(f'\nComputing covariance matrix using beta={inp.beta_fid:0.3f}...', flush=True)

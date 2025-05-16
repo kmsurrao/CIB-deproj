@@ -138,8 +138,6 @@ def get_all_ymaps(inp, beta):
         get_realistic_infl_maps(inp, beta)
         tsz_sed = tsz_spectral_response(inp.frequencies, delta_bandpasses=inp.delta_passbands, inp=inp)
         cib_sed = cib_spectral_response(inp.frequencies, delta_bandpasses=inp.delta_passbands, inp=inp, beta=beta)
-        # h_vec = inp.alpha*np.ones_like(inp.frequencies, dtype=np.float32)
-        # h_vec[-1] = -inp.alpha*sum(tsz_sed[:len(tsz_sed)]**2)/(tsz_sed[-1]**2)
         contam_sed = cib_sed*(1+inp.h_vec)
         HILC_map(inp, beta, tsz_sed, contam_sed = contam_sed, inflated=True)
     return 1
@@ -194,5 +192,5 @@ if __name__ == '__main__':
     get_freq_maps(inp, diff_noise=False, no_cib=False)
 
     # test pyilc
-    beta = 0.65
+    beta = 1.65
     setup_pyilc(inp, env, beta, suppress_printing=False, inflated=False, standard_ilc=False, no_cib=False)

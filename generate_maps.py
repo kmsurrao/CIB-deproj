@@ -140,8 +140,6 @@ def get_realistic_infl_maps(inp, beta):
     '''
     ymap = hp.read_map(f"{inp.output_dir}/pyilc_outputs/beta_{beta:.3f}_uninflated/needletILCmap_component_tSZ_deproject_CIB.fits")
     tsz_sed_vec = tsz_spectral_response(inp.frequencies, delta_bandpasses = inp.delta_passbands, inp=inp)
-    # h_vec = [inp.alpha]*len(inp.frequencies)
-    # h_vec[-1] = -inp.alpha*sum(tsz_sed_vec[:len(tsz_sed_vec)]**2)/(tsz_sed_vec[-1]**2)
     for i, freq in enumerate(inp.frequencies):
         orig_freq_map = hp.read_map(f'{inp.output_dir}/maps/uninflated_{freq}.fits')
         residual = orig_freq_map - tsz_sed_vec[i]*ymap

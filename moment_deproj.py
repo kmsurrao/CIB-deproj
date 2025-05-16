@@ -46,7 +46,7 @@ def setup_pyilc(inp, env, beta, suppress_printing=False):
     pyilc_input_params['taper_width'] = 0
     
     pyilc_input_params['N_freqs'] = len(inp.frequencies)
-    if inp.cib_decorr:
+    if not inp.delta_passbands:
         pyilc_input_params['bandpass_type'] = 'ActualBandpasses'
     else:
         pyilc_input_params['bandpass_type'] = 'DeltaBandpasses' 
