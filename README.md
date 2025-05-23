@@ -1,5 +1,5 @@
 # CIB-deproj
-Computation of the optimal SED for CIB deprojection for enhancing signal-to-noise in tSZ cross-correlations  
+Computation of the optimal SED for CIB deprojection for enhancing signal-to-noise in tSZ cross-correlations. If you use the code in a publication, please cite https://arxiv.org/abs/2505.14644.  
 
 ## Requirements and Set-up
  - Requires a clone of the pyilc repository (https://github.com/jcolinhill/pyilc).  
